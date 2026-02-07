@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Print Receipt</title>
+    <style>
+      @page {
+        size: 74mm auto;
+        margin: 0;
+      }
+
+      body {
+        width: 74mm;
+        font-family: 'Courier New', Courier, monospace;
+        font-size: 12px;
+        margin: 0;
+        /* padding: 8px 10px; */
+        color: #111;
+      }
+
+      .center {
+        text-align: center;
+      }
+
+      .line {
+        border-top: 1px dashed #000;
+        margin: 8px 0;
+      }
+
+      .store-name {
+        font-weight: 800;
+        font-size: 14px;
+        /* margin-bottom: 4px; */
+      }
+
+      .sub {
+        font-size: 11px;
+        color: #333;
+        margin-bottom: 6px;
+      }
+
+      .receipt {
+        font-family: monospace;
+        font-size: 12px;
+      }
+
+      .item {
+        margin-bottom: 6px;
+      }
+
+      .item-name {
+        font-weight: bold;
+      }
+
+      .item-row {
+        display: flex;
+        justify-content: space-between;
+      }
+
+      .item-note {
+        font-size: 11px;
+        font-style: italic;
+        margin-left: 8px;
+      }
+
+      .summary {
+        margin-top: 8px;
+      }
+
+      .summary .row {
+        display: flex;
+        justify-content: space-between;
+        margin-right: 50px;
+      }
+
+      .summary .total {
+        font-weight: bold;
+      }
+
+      .divider {
+        border-top: 1px dashed #000;
+        margin: 6px 0;
+      }
+
+      .divider.bold {
+        border-top: 2px solid #000;
+      }
+
+      .empty {
+        text-align: center;
+        font-style: italic;
+      }
+
+      footer {
+        margin-top: 8px;
+        font-size: 11px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="header1" class="store-name">STORE NAME</div>
+    <div id="header2" class="sub" style="margin-bottom: 10px">Kitchen Order Ticket</div>
+    <div id="header3" class="sub">No: -</div>
+
+    <div class="line"></div>
+
+    <div id="content">
+      <!-- injected content: order items and details -->
+      <div class="items">
+        <div class="item-row">
+          <div class="item-name">Contoh Menu</div>
+          <div class="item-qty">1</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="line"></div>
+
+    <center>
+      <div id="footer1" class="center">--</div>
+      <div id="footer2" class="center">--</div>
+      <div id="footer3" class="center">--</div>
+    </center>
+  </body>
+</html>

@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "jsx": "react-jsx",
+    "paths": {
+      "@renderer/*": ["src/renderer/src/*"],
+      "@/*": ["src/renderer/src/*"],
+      "@components/*": ["src/renderer/src/components/*"],
+      "@pages/*": ["src/renderer/src/pages/*"],
+      "@utils/*": ["src/renderer/src/utils/*"],
+      "@services/*": ["src/renderer/src/services/*"],
+      "@store/*": ["src/renderer/src/store/*"],
+      "@assets/*": ["src/renderer/src/assets/*"]
+    }
+  },
+  "include": [
+    "src/renderer/src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "out"
+  ]
+}
