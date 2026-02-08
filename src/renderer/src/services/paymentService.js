@@ -137,11 +137,8 @@ const PaymentService = () => {
     }
 
     try {
-      const res = await axiosInstance.patch(
-        `/trx-service/transaction/${transactionGuid}`,
-        payload
-      )
-      
+      const res = await axiosInstance.patch(`/trx-service/transaction/${transactionGuid}`, payload)
+
       // Update cache if successful
       const cachedTransaction = await localdb.transactionDetails.get(transactionGuid)
       if (cachedTransaction) {
@@ -153,40 +150,6 @@ const PaymentService = () => {
     } catch (error) {
       console.error('Error updating payment:', error)
       throw error
-    }
-  }
-
-  // ============================
-  // UPLOAD RECEIPT IMAGE
-  // ============================
-  const uploadReceipt = async (file) => {
-    if (!isOnline()) {
-      throw new Error('Upload hanya bisa dilakukan saat online')
-    }
-
-    try {
-      const formData = new FormData()
-      formData.append('files', file)
-
-      const res = await axiosInstance.post('/media-service/upload/receipt', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      })
-
-      return res.data
-    } catch (error) {
-      console.error('Error uploading receipt:', error)
-      
-      let errorMessage = 'Gagal upload receipt. Coba lagi nanti.'
-      
-      if (error.response?.data?.data?.message) {
-        errorMessage = error.response.data.data.message
-      } else if (error.response?.data?.message) {
-        errorMessage = error.response.data.message
-      }
-      
-      throw new Error(errorMessage)
     }
   }
 
@@ -218,7 +181,7 @@ const PaymentService = () => {
     try {
       const payload = {
         transaction_id: transactionId,
-        products: products.map(product => ({
+        products: products.map((product) => ({
           product_id: product.product_id,
           qty: product.qty.toString()
         }))
@@ -248,7 +211,6 @@ const PaymentService = () => {
   return {
     getPaymentMethods,
     updateTransactionPayment,
-    uploadReceipt,
     addTransactionItem,
     clearCache
   }

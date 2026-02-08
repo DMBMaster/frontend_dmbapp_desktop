@@ -1,9 +1,13 @@
 import { useState, useEffect } from 'react'
 import InstoreService from '@renderer/services/instoreService'
 import { useDropzone } from 'react-dropzone'
+import MediaService from '@renderer/services/mediaService'
+import { useNotifier } from '@renderer/components/core/NotificationProvider'
 
 export const useInstore = () => {
+  const notifier = useNotifier()
   const instoreService = InstoreService()
+  const mediaService = MediaService()
 
   // ============================
   // STATE MANAGEMENT
@@ -102,11 +106,7 @@ export const useInstore = () => {
     // Validate room details
     for (let i = 0; i < roomDetails.length; i++) {
       const room = roomDetails[i]
-      if (
-        !room.roomType ||
-        !room.roomNumber ||
-        !room.adultCount
-      ) {
+      if (!room.roomType || !room.roomNumber || !room.adultCount) {
         valid = false
         break
       }
@@ -478,12 +478,12 @@ export const useInstore = () => {
         items.push({
           product_id: roomDetails[i].roomType,
           room_id: roomDetails[i].roomNumber,
-          rate_plan_id: roomDetails[i].ratePlan || "",
+          rate_plan_id: roomDetails[i].ratePlan || '',
           qty: 1,
-          note: notes || "",
-          adult_qty: roomDetails[i].adultCount || "1",
-          child_qty: roomDetails[i].childCount || "0",
-          breakfast: roomDetails[i].breakfast || "false"
+          note: notes || '',
+          adult_qty: roomDetails[i].adultCount || '1',
+          child_qty: roomDetails[i].childCount || '0',
+          breakfast: roomDetails[i].breakfast || 'false'
         })
       }
 
@@ -495,18 +495,18 @@ export const useInstore = () => {
         items,
         ...(selectedCustomer && { customer_id: selectedCustomer.id || selectedCustomer }),
         payment_method: paymentMethod,
-        name: senderName || guestName || "",
-        billing_name: senderName || guestName || "",
-        phone: guestPhone || "",
-        email: email || "",
-        identity: identityType || "",
-        identity_number: identityNumber || "",
-        bank_name: bankRecipientName || "",
-        bank_account: bankAccountRecipient || "",
-        attachment: attatchmentUrl || "",
-        refference_id: referenceNumber || "",
-        no_appr: approvalCode || "",
-        no_trace: traceNumber || "",
+        name: senderName || guestName || '',
+        billing_name: senderName || guestName || '',
+        phone: guestPhone || '',
+        email: email || '',
+        identity: identityType || '',
+        identity_number: identityNumber || '',
+        bank_name: bankRecipientName || '',
+        bank_account: bankAccountRecipient || '',
+        attachment: attatchmentUrl || '',
+        refference_id: referenceNumber || '',
+        no_appr: approvalCode || '',
+        no_trace: traceNumber || '',
         ticket_status: 'CHECKIN',
         is_repeat: isMonthlyTransaction || false,
         status: paymentMethod === 'cicilan' ? 'SUBMIT' : 'PAID'
@@ -556,21 +556,19 @@ export const useInstore = () => {
     onDrop: async (acceptedFiles) => {
       setUploadImage(acceptedFiles[0])
       try {
-        const uploadResponse = await instoreService.uploadReceipt(acceptedFiles[0])
-        setAttachmentUrl(uploadResponse.url)
+        const result = await mediaService.uploadReceipt(acceptedFiles[0])
+        setAttachmentUrl(result.url)
+        notifier.show({
+          message: 'File uploaded successfully',
+          description: 'Receipt uploaded successfully',
+          severity: 'success'
+        })
       } catch (error) {
-        let errorMessage = 'An unexpected error occurred. Please try again later.'
-
-        if (error.response?.data?.data?.message) {
-          errorMessage = error.response.data.data.message
-        } else if (error.response?.data?.message) {
-          errorMessage = error.response.data.message
-        }
-
-        setSnackbarMessage(errorMessage)
-        setSnackbarOpen(true)
-        setError(errorMessage)
-        console.error('Error during file upload:', error)
+        notifier.show({
+          message: 'Error uploading file',
+          description: `There was an error uploading the receipt. ${error.message}`,
+          severity: 'error'
+        })
       }
     }
   })

@@ -63,6 +63,7 @@ import {
 import { useNavigate } from 'react-router-dom'
 import { formatDate, formatDateTime, formatRupiah, getImgUrl } from '@renderer/utils/myFunctions'
 import Breadcrumb from '@renderer/components/ui/breadcrumb/Breadcrumb'
+import { listOutlets } from '@renderer/utils/config'
 const BCrumb = [
   {
     to: '/',
@@ -85,7 +86,6 @@ export const ExpensesPage = () => {
     // List data
     data,
     loading,
-    outletsData,
     categoryData,
     employeeData,
     fetchData,
@@ -127,7 +127,7 @@ export const ExpensesPage = () => {
 
   // Filter states
   const [selectedOutlet, setSelectedOutlet] = useState(
-    outletsData && outletsData.length > 0 ? outletsData[0] : null
+    listOutlets && listOutlets.length > 0 ? listOutlets[0] : null
   )
 
   const [filterCategory, setFilterCategory] = useState('')
@@ -137,8 +137,6 @@ export const ExpensesPage = () => {
   // Image preview dialog
   const [openPreview, setOpenPreview] = useState(false)
   const [previewImageUrl, setPreviewImageUrl] = useState('')
-
-  const baseURL = import.meta.env.VITE_API_URL || ''
 
   // Category filter options
   const categoryFilterOptions = useMemo(() => {
@@ -171,7 +169,7 @@ export const ExpensesPage = () => {
   // Handle fetch data with filters
   const handleFetchData = () => {
     fetchData({
-      outletId: selectedOutlet?.guid,
+      outletId: selectedOutlet?.outlet_id,
       startDate,
       endDate,
       categoryId: filterCategory,
@@ -379,7 +377,7 @@ export const ExpensesPage = () => {
         }
       })
     ],
-    [baseURL]
+    []
   )
 
   // Calculate pagination
@@ -430,16 +428,16 @@ export const ExpensesPage = () => {
           <Paper elevation={0} sx={{ p: 3, mb: 3, borderRadius: 2 }}>
             <Grid container spacing={2}>
               {/* Row 1: Outlet, Tanggal Mulai, Tanggal Akhir */}
-              {outletsData && outletsData.length > 1 && (
+              {listOutlets && listOutlets.length > 1 && (
                 <Grid size={{ xs: 12, md: 4 }}>
                   <Autocomplete
                     value={selectedOutlet}
                     onChange={(_, newValue) => {
                       setSelectedOutlet(newValue)
                     }}
-                    options={outletsData}
-                    getOptionLabel={(option) => option?.name || ''}
-                    isOptionEqualToValue={(option, value) => option?.guid === value?.guid}
+                    options={listOutlets}
+                    getOptionLabel={(option) => option?.outlet?.outlet_name || ''}
+                    isOptionEqualToValue={(option, value) => option?.outlet_id === value?.outlet_id}
                     renderInput={(params) => (
                       <TextField {...params} label="Pilih Outlet" fullWidth variant="outlined" />
                     )}
@@ -447,7 +445,7 @@ export const ExpensesPage = () => {
                 </Grid>
               )}
 
-              <Grid size={{ xs: 12, md: outletsData && outletsData.length > 1 ? 4 : 6 }}>
+              <Grid size={{ xs: 12, md: listOutlets && listOutlets.length > 1 ? 4 : 6 }}>
                 <TextField
                   id="start-date"
                   label="Tanggal Mulai"
@@ -460,7 +458,7 @@ export const ExpensesPage = () => {
                 />
               </Grid>
 
-              <Grid size={{ xs: 12, md: outletsData && outletsData.length > 1 ? 4 : 6 }}>
+              <Grid size={{ xs: 12, md: listOutlets && listOutlets.length > 1 ? 4 : 6 }}>
                 <TextField
                   id="end-date"
                   label="Tanggal Akhir"

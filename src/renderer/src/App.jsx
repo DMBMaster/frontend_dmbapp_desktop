@@ -93,6 +93,7 @@ const SidebarLayout = ({ children }) => {
         logo={`${assetsPathConfig}\\images\\logo.png`}
         onLogout={handleLogout}
         sidebarService={sidebarService}
+        appRoutes={appRoutes}
       />
 
       <Box

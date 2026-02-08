@@ -31,7 +31,7 @@ import {
   Typography
 } from '@mui/material'
 import Breadcrumb from '@renderer/components/ui/breadcrumb/Breadcrumb'
-import { formatRupiah } from '@renderer/utils/myFunctions'
+import { formatDate, formatRupiah } from '@renderer/utils/myFunctions'
 import {
   IconChevronLeft,
   IconChevronRight,
@@ -119,9 +119,7 @@ export const HistoryTransactionPage = () => {
     isOnline,
 
     // Utils
-    getStatusLabel,
-    formatDateString,
-    formatNumber
+    getStatusLabel
   } = UseIndex()
 
   // Sorting state for react-table
@@ -258,7 +256,7 @@ export const HistoryTransactionPage = () => {
           const { checkin_time, check_in } = info.row.original
           const formattedCheckin = checkin_time
             ? formatDateTime(checkin_time)
-            : formatDateString(check_in || '')
+            : formatDate(check_in || '')
           return <Typography variant="body1">{formattedCheckin}</Typography>
         }
       }),
@@ -270,14 +268,14 @@ export const HistoryTransactionPage = () => {
           const { checkout_time, check_out } = info.row.original
           const formattedCheckout = checkout_time
             ? formatDateTime(checkout_time)
-            : formatDateString(check_out || '')
+            : formatDate(check_out || '')
           return <Typography variant="body1">{formattedCheckout}</Typography>
         }
       }),
       columnHelper.accessor('grand_total', {
         enableSorting: true,
         header: () => 'Total',
-        cell: (info) => <Typography variant="body1">{formatNumber(info.getValue())}</Typography>
+        cell: (info) => <Typography variant="body1">{formatRupiah(info.getValue())}</Typography>
       }),
       columnHelper.accessor('guid', {
         id: 'actions_hotel',
@@ -341,19 +339,23 @@ export const HistoryTransactionPage = () => {
         header: () => 'Kode Pesananan',
         cell: (info) => (
           <Typography variant="body1">
-            {info.getValue() || info.row.original.refference_id}
+            {info.getValue() || info.row.original.ticket.booking_id}
           </Typography>
         )
       }),
       columnHelper.accessor('created_at', {
-        header: () => 'Tangal',
-        cell: (info) => <Typography variant="body1">{formatDateTime(info.getValue())}</Typography>
+        header: () => 'Tanggal',
+        cell: (info) => (
+          <Typography variant="body1">
+            {formatDateTime(info.getValue() || info.row.original.booking_date)}
+          </Typography>
+        )
       }),
       columnHelper.accessor('reservation_name', {
         header: () => 'Nama Pelanggan',
         cell: (info) => <Typography variant="body1">{info.getValue()}</Typography>
       }),
-      ...(localStorage.getItem('outletCategoryId') === '15'
+      ...(localStorage.getItem('outletCategoryId') === 15
         ? [
             columnHelper.accessor('no_polisi', {
               header: () => 'No Polisi',
@@ -363,15 +365,15 @@ export const HistoryTransactionPage = () => {
         : []),
       columnHelper.accessor('sub_total', {
         header: () => 'Sub Total',
-        cell: (info) => <Typography variant="body1">{formatNumber(info.getValue())}</Typography>
+        cell: (info) => <Typography variant="body1">{formatRupiah(info.getValue())}</Typography>
       }),
       columnHelper.accessor('discount_nominal', {
         header: () => 'Diskon',
-        cell: (info) => <Typography variant="body1">{formatNumber(info.getValue())}</Typography>
+        cell: (info) => <Typography variant="body1">{formatRupiah(info.getValue())}</Typography>
       }),
       columnHelper.accessor('grand_total', {
         header: () => 'Grand Total',
-        cell: (info) => <Typography variant="body1">{formatNumber(info.getValue())}</Typography>
+        cell: (info) => <Typography variant="body1">{formatRupiah(info.getValue())}</Typography>
       }),
       columnHelper.accessor('status', {
         header: () => 'Status',
@@ -799,7 +801,7 @@ export const HistoryTransactionPage = () => {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={columns.length} align="center">
-                      <Typography>No data available</Typography>
+                      <Typography color="textPrimary">No data available</Typography>
                     </TableCell>
                   </TableRow>
                 )}
@@ -830,7 +832,9 @@ export const HistoryTransactionPage = () => {
             direction={{ xs: 'column', sm: 'row' }}
             justifyContent="space-between"
           >
-            <Typography variant="body1">{totalCount} Rows</Typography>
+            <Typography variant="body1" color="textPrimary">
+              {totalCount} Rows
+            </Typography>
 
             <Stack direction="row" alignItems="center" gap={1}>
               <IconButton size="small" onClick={() => setPage(1)} disabled={page === 1}>
@@ -843,7 +847,7 @@ export const HistoryTransactionPage = () => {
               >
                 <IconChevronLeft />
               </IconButton>
-              <Typography>
+              <Typography variant="body1" color="textPrimary">
                 Page {page} of {pageCount}
               </Typography>
               <IconButton
@@ -863,7 +867,9 @@ export const HistoryTransactionPage = () => {
             </Stack>
 
             <Stack direction="row" alignItems="center" gap={1}>
-              <Typography>Rows per page:</Typography>
+              <Typography variant="body1" color="textPrimary">
+                Rows per page:
+              </Typography>
               <Select value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))}>
                 {[10, 15, 20, 25].map((size) => (
                   <MenuItem key={size} value={size}>

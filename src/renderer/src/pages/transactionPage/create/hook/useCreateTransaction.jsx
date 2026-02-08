@@ -7,6 +7,8 @@ import ProductService from '@renderer/services/productService'
 import { useNetworkStore } from '@renderer/store/networkStore'
 import { formatRupiah, parseCurrencyToNumber } from '@renderer/utils/myFunctions'
 import { useNotifier } from '@renderer/components/core/NotificationProvider'
+import MediaService from '@renderer/services/mediaService'
+import { buildReceiptHTML } from '../components/printTransaction'
 
 export const useCreateTransaction = () => {
   const navigate = useNavigate()
@@ -14,6 +16,7 @@ export const useCreateTransaction = () => {
 
   // Services
   const cartService = CartService()
+  const mediaService = MediaService()
   const productService = ProductService()
 
   // Network status
@@ -95,16 +98,6 @@ export const useCreateTransaction = () => {
   // Pagination
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
-
-  const formatNominal = (value) => {
-    const cleanValue = value.replace(/[^0-9]/g, '')
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(Number(cleanValue))
-  }
 
   const getTodayDate = () => {
     return new Date().toISOString().split('T')[0]
@@ -412,7 +405,7 @@ export const useCreateTransaction = () => {
 
   const handleAmountPaidChange = (event) => {
     const inputValue = event.target.value
-    const formattedValue = formatNominal(inputValue)
+    const formattedValue = formatRupiah(inputValue)
     const paidAmount = parseCurrencyToNumber(formattedValue)
     const changeAmount = paidAmount - finalGrandTotal
 
@@ -455,7 +448,7 @@ export const useCreateTransaction = () => {
       setUploadImage(file)
 
       try {
-        const result = await cartService.uploadReceipt(file)
+        const result = await mediaService.uploadReceipt(file)
         setAttachmentUrl(result.url)
         notifier.show({
           message: 'Sukses',
@@ -523,6 +516,32 @@ export const useCreateTransaction = () => {
     return true
   }
 
+  const buildPrintPayloadFromCart = () => {
+    const items = cartItems.map((item) => ({
+      productName: item.product_name,
+      quantity: item.qty,
+      price: item.price,
+      notes: item.note || ''
+    }))
+
+    return {
+      invoiceNo: '',
+      invoiceDate: '',
+      dueDate: '',
+      customerName: '',
+      items,
+      totalAmount: subTotal,
+      discount:
+        discountType === 'nominal'
+          ? Number(discountAmount || 0)
+          : discountType === 'percentage'
+            ? (subTotal * Number(discountAmount || 0)) / 100
+            : 0,
+      tax: 0,
+      grandTotal: finalGrandTotal || grandTotal
+    }
+  }
+
   const handleSubmit = async () => {
     if (!validateCheckout()) return
 
@@ -563,6 +582,18 @@ export const useCreateTransaction = () => {
           : 'Transaksi berhasil dibuat',
         severity: 'success'
       })
+
+      const printOrder = buildPrintPayloadFromCart()
+
+      const dataToprint = {
+        header1: localStorage.getItem('outletName') || 'Outlet',
+        header2: 'Checking Order',
+        header3: '---',
+        contentHTML: buildReceiptHTML(printOrder),
+        footer1: 'Terima kasih atas kunjungan Anda!',
+        footer2: 'Simpan struk ini sebagai bukti pembayaran.'
+      }
+      window.api.printOrderReceipt(dataToprint)
 
       // Navigate to history after success
       setTimeout(() => {
@@ -742,7 +773,6 @@ export const useCreateTransaction = () => {
     setPageSize,
 
     // Utilities
-    formatNominal,
     formatRupiah
   }
 }

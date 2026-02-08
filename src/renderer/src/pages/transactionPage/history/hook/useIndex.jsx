@@ -8,6 +8,7 @@ import debounce from 'lodash/debounce'
 import ProductService from '@renderer/services/productService'
 import ProductCategoryService from '@renderer/services/productCategoryService'
 import TransactionService from '@renderer/services/transactionService'
+import { listOutlets } from '@renderer/utils/config'
 
 export const UseIndex = () => {
   const statusOptions = [
@@ -56,25 +57,8 @@ export const UseIndex = () => {
     }
   }
 
-  const formatDateString = (datetime) => {
-    if (!datetime) return '-'
-    const date = new Date(datetime)
-    return date.toLocaleDateString('id-ID', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    })
-  }
-
-  const formatNumber = (amount) => {
-    if (!amount) return '0'
-    return new Intl.NumberFormat('id-ID').format(Number(amount))
-  }
-
-  const outlets = localStorage.getItem('outlets')
-  const outletsData = outlets ? JSON.parse(outlets) : []
   const selectedOutlet =
-    outletsData.find((o) => o.guid === localStorage.getItem('outletGuid')) || null
+    listOutlets.find((o) => o.guid === localStorage.getItem('outletGuid')) || null
 
   // Service
   const transactionService = TransactionService()
@@ -139,42 +123,113 @@ export const UseIndex = () => {
     async (params) => {
       setLoadingTrx(true)
       try {
-        const queryParams = {
-          outlet_id: params?.outletId || localStorage.getItem('outletGuid'),
-          start_date: params?.startDate || startDate,
-          end_date: params?.endDate || endDate,
-          p: page,
-          ps: pageSize
+        const outletId = params?.outletId || localStorage.getItem('outletGuid')
+
+        // ===== HOTEL CASE (outletCategoryId == 1) =====
+        if (localStorage.getItem('outletCategoryId') == 1) {
+          const queryParams = {
+            outlet_id: outletId,
+            p: page,
+            ps: pageSize,
+            ob: 'transaction.created_at',
+            d: 'DESC',
+            date_of: 'booking'
+          }
+
+          // Add optional parameters only if they have values
+          const start_date = params?.start_date || startDate
+          if (start_date) {
+            queryParams.start_at = start_date
+          }
+
+          const end_date = params?.end_date || endDate
+          if (end_date) {
+            queryParams.end_at = end_date
+          }
+
+          const statusValue = params?.status || status
+          if (statusValue) {
+            queryParams.status = statusValue
+          }
+
+          const productIdValue = params?.productId || productId
+          if (productIdValue) {
+            queryParams.product_id = productIdValue
+          }
+
+          const categoryIdValue = params?.categoryId || categoryId
+          if (categoryIdValue) {
+            queryParams.category_id = categoryIdValue
+          }
+
+          const response = await transactionService.getTransactions(queryParams)
+          const transactions = response.data || []
+
+          setData(transactions)
+          setTotalCount(transactions.length)
+          setPageCount(Math.ceil(transactions.length / pageSize))
+          setOpenRows(new Array(transactions.length).fill(false))
         }
+        // ===== NON-HOTEL CASE (outletCategoryId != 1) =====
+        else {
+          const queryParams = {
+            outlet_id: outletId,
+            p: page,
+            ps: pageSize,
+            ob: 'created_at',
+            d: 'DESC'
+          }
 
-        // Add optional parameters only if they have values
-        const statusValue = params?.status || status
-        if (statusValue) {
-          queryParams.status = statusValue
+          // Add optional parameters only if they have values
+          const start_date = params?.start_date || startDate
+          if (start_date) {
+            queryParams.start_at = start_date
+          }
+
+          const end_date = params?.end_date || endDate
+          if (end_date) {
+            queryParams.end_at = end_date
+          }
+
+          const statusValue = params?.status || status
+          if (statusValue) {
+            queryParams.status = statusValue
+          }
+
+          const productIdValue = params?.productId || productId
+          if (productIdValue) {
+            queryParams.product_id = productIdValue
+          }
+
+          const categoryIdValue = params?.categoryId || categoryId
+          if (categoryIdValue) {
+            queryParams.category_id = categoryIdValue
+          }
+
+          const searchValue = params?.search || searchTerm
+          if (searchValue) {
+            queryParams.search = searchValue
+          }
+
+          const response = await transactionService.getTransactionsV2(queryParams)
+          const transactions = response.data || []
+          const meta = response.meta
+
+          setData(transactions)
+
+          // Use meta from API if available, otherwise calculate manually
+          if (meta) {
+            setPage(meta.page)
+            setPageSize(meta.perPage)
+            setTotalCount(meta.totalCount)
+            setPageCount(meta.pageCount)
+          } else {
+            setTotalCount(transactions.length)
+            setPageCount(Math.ceil(transactions.length / pageSize))
+          }
+
+          setOpenRows(new Array(transactions.length).fill(false))
         }
-
-        const productIdValue = params?.productId || productId
-        if (productIdValue) {
-          queryParams.product_id = productIdValue
-        }
-
-        const categoryIdValue = params?.categoryId || categoryId
-        if (categoryIdValue) {
-          queryParams.category_id = categoryIdValue
-        }
-
-        const searchValue = params?.search || searchTerm
-        if (searchValue) {
-          queryParams.search = searchValue
-        }
-
-        const response = await transactionService.getTransactions(queryParams)
-        const transactions = response.data || []
-
-        setData(transactions)
-        setTotalCount(transactions.length)
-        setPageCount(Math.ceil(transactions.length / pageSize))
-        setOpenRows(new Array(transactions.length).fill(false))
       } catch (error) {
         console.error('Error fetching transactions:', error)
         setSnackbar({
@@ -535,7 +590,6 @@ export const UseIndex = () => {
     data: filteredData,
     products,
     categories,
-    outletsData,
     selectedOutlet,
     loading,
     loadingTrx,
@@ -595,8 +649,6 @@ export const UseIndex = () => {
     isOnline,
 
     // Utils
-    getStatusLabel,
-    formatDateString,
-    formatNumber
+    getStatusLabel
   }
 }

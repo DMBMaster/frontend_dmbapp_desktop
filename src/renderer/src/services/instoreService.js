@@ -423,42 +423,6 @@ const InstoreService = () => {
   }
 
   // ============================
-  // UPLOAD RECEIPT
-  // ============================
-  const uploadReceipt = async (file) => {
-    if (!isOnline()) {
-      return {
-        status: 'error',
-        status_code: 503,
-        message: 'Upload receipt tidak tersedia saat offline.',
-        error: 'offline',
-        data: null,
-        offline: true
-      }
-    }
-
-    try {
-      const formData = new FormData()
-      formData.append('files', file)
-
-      const response = await axiosInstance.post('/media-service/upload/receipt', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-          Authorization: `Bearer ${getToken()}`
-        }
-      })
-
-      return {
-        url: response.data.data.download.actual,
-        filename: file.name
-      }
-    } catch (error) {
-      console.error('Error uploading receipt:', error)
-      throw error
-    }
-  }
-
-  // ============================
   // CREATE INSTORE RESERVATION
   // ============================
   const createReservation = async (payload) => {
@@ -656,7 +620,6 @@ const InstoreService = () => {
     getRatePlans,
     getRatePlansFromService,
     getPaymentMethods,
-    uploadReceipt,
     createReservation,
     createWalkInTransaction,
     getRoomAvailability,

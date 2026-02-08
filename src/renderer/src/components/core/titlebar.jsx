@@ -160,37 +160,42 @@ export const TitleBar = ({ username, theme = 'light', onLogout, showUpdateButton
   }
 
   useEffect(() => {
-    const handleProgress = (_event, percent) => {
+    // Subscribe to update progress
+    const unsubProgress = window.api.onUpdateProgress((percent) => {
       setDownloadProgress(percent)
       setOpenedProgress(true)
       if (percent >= 100) {
         setTimeout(() => setOpenedProgress(false), 2000)
       }
-    }
+    })
 
-    const handleUpdateNotification = (_event, msg, type) => {
-      setUpdateInfoMsg(msg)
-      setUpdateInfoSeverity(type === 'latest' ? 'success' : 'info')
+    // Subscribe to update notifications
+    const unsubNotification = window.api.onUpdateNotification((message, severity) => {
+      setUpdateInfoMsg(message)
+      setUpdateInfoSeverity(severity)
       setUpdateInfoOpen(true)
-    }
+    })
 
-    window.electron.ipcRenderer.on('update:download-progress', handleProgress)
-    window.electron.ipcRenderer.on('update:notification', handleUpdateNotification)
     return () => {
-      window.electron.ipcRenderer.removeAllListeners('update:download-progress')
-      window.electron.ipcRenderer.removeAllListeners('update:notification')
+      unsubProgress()
+      unsubNotification()
     }
   }, [])
 
-  // const handleCheckUpdates = (): void => {
-  //   try {
-  //     notifier.show({ message: 'Memeriksa pembaruan...', severity: 'info' })
-  //     window.electron.ipcRenderer.send('check-for-updates')
-  //   } catch (e) {
-  //     console.error('Failed to request update check', e)
-  //     notifier.show({ message: 'Gagal memeriksa pembaruan', severity: 'error' })
-  //   }
-  // }
+  const handleCheckUpdates = () => {
+    try {
+      setUpdateInfoMsg('Memeriksa pembaruan...')
+      setUpdateInfoSeverity('info')
+      setUpdateInfoOpen(true)
+
+      window.api.checkForUpdates()
+    } catch (e) {
+      console.error('Failed to request update check', e)
+      setUpdateInfoMsg('Gagal memeriksa pembaruan')
+      setUpdateInfoSeverity('error')
+      setUpdateInfoOpen(true)
+    }
+  }
 
   const handleMinimize = () => {
     window.electron?.ipcRenderer.send('window-minimize')
@@ -390,9 +395,7 @@ export const TitleBar = ({ username, theme = 'light', onLogout, showUpdateButton
                 size="small"
                 variant="outlined"
                 startIcon={<UpdateIcon />}
-                onClick={() => {
-                  window.electron.ipcRenderer.send('check-for-updates')
-                }}
+                onClick={handleCheckUpdates}
                 sx={{
                   color: 'white',
                   borderColor: 'rgba(255,255,255,0.18)',

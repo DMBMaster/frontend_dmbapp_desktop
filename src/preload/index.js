@@ -12,6 +12,41 @@ const api = {
 
   printOrderReceipt(data) {
     ipcRenderer.send('print-order-receipt', data)
+  },
+
+  // Auto updater
+  checkForUpdates: () => {
+    ipcRenderer.send('check-for-updates')
+  },
+
+  onUpdateNotification: (callback) => {
+    const handler = (_event, message, severity) => callback(message, severity)
+    ipcRenderer.on('update:notification', handler)
+    return () => {
+      ipcRenderer.removeListener('update:notification', handler)
+    }
+  },
+
+  onUpdateProgress: (callback) => {
+    const handler = (_event, percent) => callback(percent)
+    ipcRenderer.on('update:download-progress', handler)
+    return () => {
+      ipcRenderer.removeListener('update:download-progress', handler)
+    }
+  },
+
+  // Network connectivity - checked from main process
+  checkNetworkStatus: async () => {
+    return await ipcRenderer.invoke('check-network-status')
+  },
+
+  onNetworkStatusChanged: (callback) => {
+    const handler = (_event, isOnline) => callback(isOnline)
+    ipcRenderer.on('network-status-changed', handler)
+    // Return cleanup function
+    return () => {
+      ipcRenderer.removeListener('network-status-changed', handler)
+    }
   }
 }
 

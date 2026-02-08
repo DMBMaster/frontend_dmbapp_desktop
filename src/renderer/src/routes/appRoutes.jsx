@@ -6,7 +6,8 @@ import {
   DetailExpensesPage,
   HistoryTransactionPage,
   InstoreTransactionPage,
-  DetailTransactionPage
+  DetailTransactionPage,
+  FrontOfficeDashboardPage
 } from '@renderer/pages'
 import { CreateTransactionPage } from '@renderer/pages/transactionPage/create'
 
@@ -18,8 +19,15 @@ export const appRoutes = [
   // =============== PROTECTED ROUTES ===============
   {
     path: '/',
-    // element: <HomePage />,
-    element: <ExpensesPage />,
+    element: <HomePage />,
+    // element: <ExpensesPage />,
+    active: true,
+    protected: true,
+    redirectTo: '/login'
+  },
+  {
+    path: '/dashboard/frontoffice',
+    element: <FrontOfficeDashboardPage />,
     active: true,
     protected: true,
     redirectTo: '/login'

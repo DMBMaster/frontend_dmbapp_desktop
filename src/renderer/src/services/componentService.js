@@ -124,9 +124,7 @@ const ComponentService = () => {
   // Helper: Get products from cache
   const getProductsFromCache = async (outletGuid, categoryId, originalError) => {
     const cached = await localdb.products.where({ outlet_guid: outletGuid }).toArray()
-    const filtered = categoryId
-      ? cached.filter((c) => c.category_id === categoryId)
-      : cached
+    const filtered = categoryId ? cached.filter((c) => c.category_id === categoryId) : cached
 
     if (!filtered?.length) {
       if (originalError) throw originalError
@@ -253,6 +251,7 @@ const ComponentService = () => {
       })
       return response.data
     } catch (error) {
+      console.log(error)
       console.warn('⚠️ API failed → Saving transaction item to offline queue')
       await localdb.pendingTransactionItems.add({
         outlet_guid: outletGuid,
@@ -306,6 +305,7 @@ const ComponentService = () => {
       })
       return response.data
     } catch (error) {
+      console.log(error)
       console.warn('⚠️ API failed → Saving deposit to offline queue')
       await localdb.pendingTransactionItems.add({
         outlet_guid: outletGuid,
@@ -359,6 +359,7 @@ const ComponentService = () => {
       })
       return response.data
     } catch (error) {
+      console.log(error)
       console.warn('⚠️ API failed → Saving extension to offline queue')
       await localdb.pendingTransactionItems.add({
         outlet_guid: outletGuid,
@@ -415,6 +416,7 @@ const ComponentService = () => {
       })
       return response.data
     } catch (error) {
+      console.log(error)
       console.warn('⚠️ API failed → Saving payment to offline queue')
       await localdb.pendingPayments.add({
         outlet_guid: outletGuid,
@@ -551,9 +553,7 @@ const ComponentService = () => {
 
   // Helper: Get transaction payment from cache
   const getTransactionPaymentFromCache = async (outletGuid, transactionId, originalError) => {
-    const cached = await localdb.transactionPayments
-      .where({ outlet_guid: outletGuid })
-      .toArray()
+    const cached = await localdb.transactionPayments.where({ outlet_guid: outletGuid }).toArray()
     const found = cached.find((c) => c.transaction_id === transactionId)
 
     if (!found) {
@@ -600,30 +600,6 @@ const ComponentService = () => {
     const response = await axiosInstance.post(`/file-service/upload`, formData, {
       headers: {
         Authorization: `Bearer ${localStorage.getItem('token')}`
-      }
-    })
-    return response.data
-  }
-
-  const uploadMedia = async (file) => {
-    if (!isOnline()) {
-      return {
-        status: 'error',
-        status_code: 503,
-        message: 'Upload tidak tersedia saat offline.',
-        error: 'offline',
-        data: null,
-        offline: true
-      }
-    }
-
-    const formData = new FormData()
-    formData.append('files', file)
-
-    const response = await axiosInstance.post(`/media-service/upload`, formData, {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem('token')}`,
-        'Content-Type': 'multipart/form-data'
       }
     })
     return response.data
@@ -747,7 +723,6 @@ const ComponentService = () => {
 
     // File services
     uploadFile,
-    uploadMedia,
 
     // Offline support
     syncPendingComponentData,

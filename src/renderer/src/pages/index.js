@@ -1,6 +1,7 @@
 import { ExpensesPage } from './expensesPage'
 import { DetailExpensesPage } from './expensesPage/detail'
 import { HomePage } from './homePage'
+import { FrontOfficeDashboardPage } from './homePage/frontOffice'
 import { InfoAppPage } from './infoAppPage'
 import { LoginPage } from './loginPage'
 import { DetailTransactionPage } from './transactionPage/detail'
@@ -15,5 +16,6 @@ export {
   DetailExpensesPage,
   HistoryTransactionPage,
   InstoreTransactionPage,
-  DetailTransactionPage
+  DetailTransactionPage,
+  FrontOfficeDashboardPage
 }

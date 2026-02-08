@@ -14,9 +14,13 @@ import {
 import { useDropzone } from 'react-dropzone'
 import PropTypes from 'prop-types'
 import ComponentService from '@renderer/services/componentService'
+import MediaService from '@renderer/services/mediaService'
+import { useNotifier } from '@renderer/components/core/NotificationProvider'
 
 export const AddPaymentDrawer = ({ guid, fetchData, open, onClose, balanceDue }) => {
+  const notifier = useNotifier()
   const componentService = ComponentService()
+  const mediaService = MediaService()
   const [price, setPrice] = React.useState('')
   const [notes, setNotes] = React.useState('')
   const [loadingSubmit, setLoadingSubmit] = React.useState(false)
@@ -90,13 +94,20 @@ export const AddPaymentDrawer = ({ guid, fetchData, open, onClose, balanceDue })
     accept: 'image/*',
     onDrop: async (acceptedFiles) => {
       setUploadImage(acceptedFiles[0])
-
       try {
-        const response = await componentService.uploadFile(acceptedFiles)
-        setAttachmentUrl(response.data.download.actual)
-        console.log('File uploaded successfully:', response.data)
+        const result = await mediaService.uploadReceipt(acceptedFiles[0])
+        setAttachmentUrl(result.url)
+        notifier.show({
+          message: 'File uploaded successfully',
+          description: 'Receipt uploaded successfully',
+          severity: 'success'
+        })
       } catch (error) {
-        console.error('Error uploading file:', error)
+        notifier.show({
+          message: 'Error uploading file',
+          description: `There was an error uploading the receipt. ${error.message}`,
+          severity: 'error'
+        })
       }
     }
   })

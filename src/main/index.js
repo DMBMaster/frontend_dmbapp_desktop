@@ -5,8 +5,12 @@ import icon from '../../resources/icon.png?asset'
 import { autoUpdater } from 'electron-updater'
 import path from 'path'
 import { readFileSync } from 'fs'
+import { net } from 'electron'
+import dns from 'dns'
 
 let mainWindow
+let networkCheckInterval = null
+let lastKnownStatus = null // track to avoid spamming renderer with same status
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 900,
@@ -115,6 +119,114 @@ ipcMain.on('print-order-receipt', (_, data) => {
   })
 })
 
+// ================================
+// NETWORK CONNECTIVITY CHECK (Main Process)
+// ================================
+
+/**
+ * Check real internet connectivity from main process using DNS + HTTP
+ * Returns true if internet is available, false otherwise
+ */
+async function checkInternetConnectivity() {
+  // Step 1: Quick check with Electron's net.isOnline()
+  if (!net.isOnline()) {
+    return false
+  }
+
+  // Step 2: DNS resolve to verify real internet (not just LAN)
+  const dnsCheck = () =>
+    new Promise((resolve) => {
+      dns.resolve('www.google.com', (err) => {
+        resolve(!err)
+      })
+    })
+
+  // Step 3: Try HTTP request as fallback
+  const httpCheck = () =>
+    new Promise((resolve) => {
+      try {
+        const request = net.request({
+          method: 'HEAD',
+          url: 'https://clients3.google.com/generate_204'
+        })
+
+        const timeout = setTimeout(() => {
+          request.abort()
+          resolve(false)
+        }, 5000)
+
+        request.on('response', (response) => {
+          clearTimeout(timeout)
+          resolve(response.statusCode >= 200 && response.statusCode < 400)
+        })
+
+        request.on('error', () => {
+          clearTimeout(timeout)
+          resolve(false)
+        })
+
+        request.end()
+      } catch {
+        resolve(false)
+      }
+    })
+
+  // Try DNS first (faster), fallback to HTTP
+  const dnsResult = await dnsCheck()
+  if (dnsResult) return true
+
+  // DNS failed, try HTTP as fallback
+  const httpResult = await httpCheck()
+  return httpResult
+}
+
+/**
+ * Send network status to renderer if changed
+ */
+function sendNetworkStatus(isOnline) {
+  if (lastKnownStatus === isOnline) return // No change, skip
+
+  lastKnownStatus = isOnline
+  console.log(`🌐 Network status changed: ${isOnline ? 'Online' : 'Offline'}`)
+
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('network-status-changed', isOnline)
+  }
+}
+
+/**
+ * Start periodic network checking
+ */
+function startNetworkMonitoring() {
+  // Initial check
+  checkInternetConnectivity().then((isOnline) => {
+    sendNetworkStatus(isOnline)
+  })
+
+  // Periodic check every 10 seconds
+  networkCheckInterval = setInterval(async () => {
+    const isOnline = await checkInternetConnectivity()
+    sendNetworkStatus(isOnline)
+  }, 10000)
+}
+
+/**
+ * Stop network monitoring
+ */
+function stopNetworkMonitoring() {
+  if (networkCheckInterval) {
+    clearInterval(networkCheckInterval)
+    networkCheckInterval = null
+  }
+}
+
+// IPC handler: renderer can request a manual check
+ipcMain.handle('check-network-status', async () => {
+  const isOnline = await checkInternetConnectivity()
+  sendNetworkStatus(isOnline)
+  return isOnline
+})
+
 app.whenReady().then(() => {
   electronApp.setAppUserModelId('com.electron')
 
@@ -126,52 +238,142 @@ app.whenReady().then(() => {
 
   createWindow()
 
+  // Start network monitoring after window is created
+  startNetworkMonitoring()
+
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
 })
 
-ipcMain.on('check-for-updates', () => {
-  autoUpdater.checkForUpdates()
-})
+// ================================
+// AUTO UPDATER
+// ================================
 
 // Konfigurasi auto update
 autoUpdater.autoDownload = false
 
-autoUpdater.on('update-available', () => {
-  dialog
-    .showMessageBox(mainWindow, {
-      type: 'info',
-      title: 'Update tersedia',
-      message: 'Versi baru tersedia. Mau download sekarang?',
-      buttons: ['Ya', 'Nanti']
+// Allow dev mode untuk testing auto updater
+if (is.dev) {
+  autoUpdater.forceDevUpdateConfig = true
+  // Optional: set custom dev update server if you have one
+  // autoUpdater.updateConfigPath = path.join(__dirname, 'dev-app-update.yml')
+}
+
+// IPC handler untuk manual check updates
+ipcMain.on('check-for-updates', () => {
+  console.log('🔍 Checking for updates...')
+  autoUpdater
+    .checkForUpdates()
+    .then(() => {
+      console.log('✅ Update check initiated')
     })
-    .then((result) => {
-      if (result.response === 0) {
-        autoUpdater.downloadUpdate()
+    .catch((err) => {
+      console.error('❌ Update check failed:', err)
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send(
+          'update:notification',
+          'Gagal memeriksa pembaruan. Periksa koneksi internet Anda.',
+          'error'
+        )
       }
     })
 })
 
+// Event: Update tersedia
+autoUpdater.on('update-available', (info) => {
+  console.log('🎉 Update available:', info.version)
+
+  // Send notification to renderer
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send(
+      'update:notification',
+      `Versi baru ${info.version} tersedia!`,
+      'info'
+    )
+  }
+
+  dialog
+    .showMessageBox(mainWindow, {
+      type: 'info',
+      title: 'Update tersedia',
+      message: `Versi baru ${info.version} tersedia. Mau download sekarang?`,
+      buttons: ['Ya', 'Nanti']
+    })
+    .then((result) => {
+      if (result.response === 0) {
+        console.log('📥 Starting update download...')
+        autoUpdater.downloadUpdate()
+      } else {
+        console.log('⏭️ Update skipped by user')
+      }
+    })
+})
+
+// Event: Update tidak tersedia (sudah versi terbaru)
+autoUpdater.on('update-not-available', (info) => {
+  console.log('✅ App is up to date. Current version:', info.version)
+
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send(
+      'update:notification',
+      `Aplikasi sudah versi terbaru (${info.version})`,
+      'success'
+    )
+  }
+})
+
+// Event: Error saat check update
+autoUpdater.on('error', (err) => {
+  console.error('❌ Auto updater error:', err)
+
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send(
+      'update:notification',
+      'Terjadi kesalahan saat memeriksa pembaruan',
+      'error'
+    )
+  }
+})
+
+// Event: Download progress
 autoUpdater.on('download-progress', (progressObj) => {
   const progress = Math.round(progressObj.percent)
-  if (mainWindow) {
+  console.log(`📥 Download progress: ${progress}%`)
+
+  if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('update:download-progress', progress)
   }
 })
 
-autoUpdater.on('update-downloaded', () => {
+// Event: Update downloaded
+autoUpdater.on('update-downloaded', (info) => {
+  console.log('✅ Update downloaded:', info.version)
+
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send(
+      'update:notification',
+      `Update ${info.version} siap diinstall`,
+      'success'
+    )
+  }
+
   dialog
     .showMessageBox(mainWindow, {
       title: 'Update Siap',
-      message: 'Update telah diunduh. Aplikasi akan restart untuk update.'
+      message: `Update versi ${info.version} telah diunduh. Aplikasi akan restart untuk instalasi.`,
+      buttons: ['Install Sekarang', 'Nanti']
     })
-    .then(() => {
-      autoUpdater.quitAndInstall()
+    .then((result) => {
+      if (result.response === 0) {
+        console.log('🔄 Installing update and restarting...')
+        autoUpdater.quitAndInstall()
+      }
     })
 })
 
 app.on('window-all-closed', () => {
+  stopNetworkMonitoring()
   if (process.platform !== 'darwin') {
     app.quit()
   }

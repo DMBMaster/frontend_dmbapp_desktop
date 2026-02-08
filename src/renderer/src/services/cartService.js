@@ -80,6 +80,7 @@ const CartService = () => {
       }
       return null
     } catch (error) {
+      console.log(error)
       console.warn('⚠️ API failed → Loading cart from cache + offline items')
       return getMergedOfflineCart(outletGuid)
     }
@@ -98,9 +99,7 @@ const CartService = () => {
     const serverGrandTotal = cartItem?.data?.grand_total || 0
 
     // Get offline-added items
-    const offlineItems = await localdb.offlineCartItems
-      .where({ outlet_guid: outletGuid })
-      .toArray()
+    const offlineItems = await localdb.offlineCartItems.where({ outlet_guid: outletGuid }).toArray()
 
     const offlineDisplayItems = offlineItems.map((item) => ({
       ...item.display_data,
@@ -729,37 +728,6 @@ const CartService = () => {
     }
   }
 
-  /**
-   * Upload receipt image
-   */
-  const uploadReceipt = async (file) => {
-    if (!isOnline()) {
-      return {
-        status: 'error',
-        status_code: 503,
-        message: 'Upload receipt tidak tersedia saat offline.',
-        error: 'offline',
-        data: null,
-        offline: true
-      }
-    }
-
-    const formData = new FormData()
-    formData.append('files', file)
-
-    const response = await axiosInstance.post('/media-service/upload/receipt', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-        Authorization: `Bearer ${getToken()}`
-      }
-    })
-
-    return {
-      url: response.data.data.download.actual,
-      filename: file.name
-    }
-  }
-
   // ============================
   // CLEAR CACHE
   // ============================
@@ -790,9 +758,6 @@ const CartService = () => {
     getRooms,
     getUnits,
     getCommissionStatus,
-
-    // Media
-    uploadReceipt,
 
     // Offline support
     clearCache

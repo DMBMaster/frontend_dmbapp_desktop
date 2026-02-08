@@ -22,16 +22,19 @@ import {
 import { useState } from 'react'
 import IconEye from '@mui/icons-material/Visibility' // Or replace with a custom eye icon if needed
 import CloseIcon from '@mui/icons-material/Close'
-import axios from 'axios'
 import { useDropzone } from 'react-dropzone'
 import Receipt from './Receipt'
 import CO from './CO'
 import TransactionService from '@renderer/services/transactionService'
+import MediaService from '@renderer/services/mediaService'
 import { Label } from '@mui/icons-material'
+import { useNotifier } from '@renderer/components/core/NotificationProvider'
 
 // eslint-disable-next-line react/prop-types
 export const TransactionDialog = ({ transactionId, transaction, products, loading, fetchData }) => {
+  const notifier = useNotifier()
   const transactionService = TransactionService()
+  const mediaService = MediaService()
   const [open, setOpen] = useState(false) // Modal closed by default
   const [addItemOpen, setAddItemOpen] = useState(false) // Add item dialog
   const [newItem, setNewItem] = useState({ product_guid: '', qty: 1 }) // New item state
@@ -53,7 +56,7 @@ export const TransactionDialog = ({ transactionId, transaction, products, loadin
   const [banks] = useState([])
   const [tenor, setTenor] = useState('')
   const [customTenor, setCustomTenor] = useState('')
-  const [error, setError] = useState('')
+  const [error] = useState('')
   const [cardType, setCardType] = useState('')
   const [change, setChange] = useState(0)
 
@@ -65,46 +68,25 @@ export const TransactionDialog = ({ transactionId, transaction, products, loadin
   const { getRootProps, getInputProps } = useDropzone({
     accept: 'image/*', // Specify file types you want to accept
     onDrop: async (acceptedFiles) => {
-      setUploadImage(acceptedFiles[0])
-      const formData = new FormData()
-      acceptedFiles.forEach((file) => {
-        formData.append('files', file)
-      })
+      const file = acceptedFiles[0]
+      if (!file) return
+      setUploadImage(file)
 
-      // Upload files to the server
+      // Upload file menggunakan mediaService
       try {
-        const response = await axios.post('/api/media-service/upload/receipt', formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data'
-          }
+        const result = await mediaService.uploadReceipt(file)
+        setAttachmentUrl(result.url)
+        notifier.show({
+          message: 'File uploaded successfully',
+          description: 'Receipt uploaded successfully',
+          severity: 'success'
         })
-
-        console.log(response.data.data)
-
-        // Assuming the response contains the URL of the uploaded file
-        setAttachmentUrl(response.data.data.download.actual)
-        // setSuccessMessage('File uploaded successfully!');
       } catch (error) {
-        let errorMessage = 'An unexpected error occurred. Please try again later.' // Default error message
-
-        // Check if the error response exists and contains the expected structure
-        if (
-          error.response &&
-          error.response.data &&
-          error.response.data.data &&
-          error.response.data.data.message
-        ) {
-          errorMessage = error.response.data.data.message // Extract the error message
-        } else if (error.response && error.response.data && error.response.data.message) {
-          // If the message is in a different structure, fallback to that
-          errorMessage = error.response.data.message
-        }
-
-        // Optionally, set an error state for further processing
-        setError(errorMessage)
-
-        // If you want to log the full error for debugging (this is optional)
-        console.error('Error during API request:', error)
+        notifier.show({
+          message: 'Error uploading file',
+          description: `There was an error uploading the receipt. ${error.message}`,
+          severity: 'error'
+        })
       }
     }
   })

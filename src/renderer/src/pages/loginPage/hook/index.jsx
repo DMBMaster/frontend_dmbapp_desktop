@@ -73,6 +73,23 @@ export const useIndex = () => {
           localStorage.setItem('outletCategoryId', outlets[0].category_id)
           localStorage.setItem('outletCategory', outlets[0].category)
           localStorage.setItem('defaultOutlet', JSON.stringify(outlets[0]))
+          const module = response.module // Assuming the module is the structure you showed
+          if (module && module.name === 'Home' && module.is_active === true) {
+            setTimeout(() => {
+              navigate('/') // Redirect to homepage
+              setLoading(false)
+            }, 500)
+          } else if (module && module.name === 'Housekeeping' && module.is_active === true) {
+            setTimeout(() => {
+              navigate('/housekeeping/rooms') // Redirect to homepage
+              setLoading(false)
+            }, 500)
+          } else {
+            setTimeout(() => {
+              navigate('/transaction/history') // Redirect to transaction history
+              setLoading(false)
+            }, 500)
+          }
         }
         navigate('/')
       } else {

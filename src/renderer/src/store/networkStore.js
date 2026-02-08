@@ -23,10 +23,10 @@ export const getSyncRegistry = () => syncRegistry
 // ================================
 
 export const useNetworkStore = create((set, get) => ({
-  // Initial state - use navigator.onLine directly
-  isOnline: navigator.onLine,
-  lastOnlineAt: navigator.onLine ? new Date().toISOString() : null,
-  lastOfflineAt: navigator.onLine ? null : new Date().toISOString(),
+  // Initial state - will be updated by main process via IPC
+  isOnline: true,
+  lastOnlineAt: new Date().toISOString(),
+  lastOfflineAt: null,
   isSyncing: false,
   lastSyncResult: [],
 
@@ -58,59 +58,18 @@ export const useNetworkStore = create((set, get) => ({
     console.log('🔴 Network: Offline')
   },
 
-  // Check connection - ping actual server to verify internet connectivity
+  // Request manual check from main process via IPC
   checkConnection: async () => {
-    // First quick check with navigator.onLine
-    if (!navigator.onLine) {
-      get().setOffline()
-      return false
-    }
-
-    // Actually ping a server to verify real internet connectivity
     try {
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 5000) // 5 second timeout
-
-      // Use multiple reliable endpoints to check connectivity
-      // Try fetching with cors mode from public APIs that support it
-      const checkUrls = [
-        'https://httpbin.org/get',
-        'https://api.github.com',
-        'https://cloudflare.com/cdn-cgi/trace'
-      ]
-
-      // Try the first URL that works
-      let isConnected = false
-
-      for (const url of checkUrls) {
-        try {
-          const response = await fetch(url, {
-            method: 'HEAD',
-            cache: 'no-store',
-            signal: controller.signal
-          })
-
-          if (response.ok || response.type === 'opaque') {
-            isConnected = true
-            break
-          }
-        } catch {
-          // Try next URL
-          continue
-        }
-      }
-
-      clearTimeout(timeoutId)
-
-      if (isConnected) {
+      const isOnline = await window.api.checkNetworkStatus()
+      if (isOnline) {
         get().setOnline()
-        return true
       } else {
         get().setOffline()
-        return false
       }
+      return isOnline
     } catch (error) {
-      console.log('🔴 Internet check failed:', error)
+      console.log('🔴 IPC network check failed:', error)
       get().setOffline()
       return false
     }
@@ -173,30 +132,27 @@ export const useNetworkStore = create((set, get) => ({
 // Call this once in App.jsx or main layout to setup listeners
 
 export const initNetworkListeners = () => {
-  const { setOffline, checkConnection } = useNetworkStore.getState()
+  const { setOnline, setOffline } = useNetworkStore.getState()
 
-  const handleOnline = () => {
-    console.log('🟢 Network event: online → verifying...')
-    // Verify with actual ping
-    checkConnection()
-  }
+  // Listen to network status changes from main process via IPC
+  const removeIpcListener = window.api.onNetworkStatusChanged((isOnline) => {
+    console.log(`🌐 Received network status from main process: ${isOnline ? 'Online' : 'Offline'}`)
+    if (isOnline) {
+      setOnline()
+    } else {
+      setOffline()
+    }
+  })
 
-  const handleOffline = () => {
-    setOffline()
-  }
-
-  // Add event listeners
-  window.addEventListener('online', handleOnline)
-  window.addEventListener('offline', handleOffline)
-
-  // ALWAYS set initial state based on actual connectivity check
-  console.log('🔍 Checking initial internet connectivity...')
-  checkConnection()
-
-  // Periodic connectivity check every 10 seconds
-  const intervalId = setInterval(() => {
-    checkConnection()
-  }, 10000) // Check every 10 seconds
+  // Request initial check from main process
+  console.log('🔍 Requesting initial network check from main process...')
+  window.api.checkNetworkStatus().then((isOnline) => {
+    if (isOnline) {
+      setOnline()
+    } else {
+      setOffline()
+    }
+  })
 
   // Register sync functions for all services
   registerExpensesSyncFunction()
@@ -208,9 +164,8 @@ export const initNetworkListeners = () => {
 
   // Return cleanup function
   return () => {
-    window.removeEventListener('online', handleOnline)
-    window.removeEventListener('offline', handleOffline)
-    clearInterval(intervalId)
+    // Remove IPC listener
+    removeIpcListener()
 
     // Unregister all sync functions
     unregisterSyncFunction('expenses')

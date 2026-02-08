@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
   Box,
   Drawer,
@@ -11,7 +11,8 @@ import {
   Typography,
   Divider,
   Collapse,
-  CircularProgress
+  CircularProgress,
+  Chip
 } from '@mui/material'
 import {
   Menu as MenuIcon,
@@ -21,12 +22,16 @@ import {
   Logout as LogoutIcon
 } from '@mui/icons-material'
 import { useNavigate, useLocation } from 'react-router-dom'
+import {
+  getAvailableRoutes,
+  isRouteAvailable as checkRouteAvailable
+} from '@renderer/routes/routeHelper'
 
 const DRAWER_WIDTH = 280
 const DRAWER_WIDTH_COLLAPSED = 72
 
 // eslint-disable-next-line react/prop-types
-export const Sidebar = ({ logo, onLogout, sidebarService }) => {
+export const Sidebar = ({ logo, onLogout, sidebarService, appRoutes = [] }) => {
   const navigate = useNavigate()
   const location = useLocation()
   const [open, setOpen] = useState(true)
@@ -37,6 +42,14 @@ export const Sidebar = ({ logo, onLogout, sidebarService }) => {
   const [error, setError] = useState(null)
 
   const pathname = location.pathname
+
+  // Memoize available routes untuk performance
+  const availableRoutes = useMemo(() => getAvailableRoutes(appRoutes), [appRoutes])
+
+  // Helper function to check if route exists
+  const checkRouteExists = (path) => {
+    return checkRouteAvailable(path, availableRoutes)
+  }
   /* ================= FETCH SIDEBAR ================= */
   useEffect(() => {
     const fetchSidebar = async () => {
@@ -290,10 +303,13 @@ export const Sidebar = ({ logo, onLogout, sidebarService }) => {
 
               // Menu item without children
               if (!hasChildren) {
+                const routeExists = checkRouteExists(menuItem.href)
+
                 return (
                   <ListItem key={menuId} disablePadding sx={{ mb: 0.5 }}>
                     <ListItemButton
-                      onClick={() => handleNavigation(menuItem.href)}
+                      onClick={() => routeExists && handleNavigation(menuItem.href)}
+                      disabled={!routeExists}
                       sx={{
                         borderRadius: 2,
                         mx: 1,
@@ -302,7 +318,8 @@ export const Sidebar = ({ logo, onLogout, sidebarService }) => {
                         '&:hover': {
                           bgcolor: isActive(menuItem.href) ? 'primary.light' : 'action.hover'
                         },
-                        justifyContent: open ? 'initial' : 'center'
+                        justifyContent: open ? 'initial' : 'center',
+                        opacity: routeExists ? 1 : 0.6
                       }}
                     >
                       <ListItemIcon
@@ -316,14 +333,30 @@ export const Sidebar = ({ logo, onLogout, sidebarService }) => {
                         {menuItem.icon}
                       </ListItemIcon>
                       {open && (
-                        <ListItemText
-                          primary={menuItem.title}
-                          primaryTypographyProps={{
-                            fontSize: 14,
-                            fontWeight: isActive(menuItem.href) ? 600 : 400,
-                            color: isActive(menuItem.href) ? 'primary.main' : 'text.primary'
-                          }}
-                        />
+                        <>
+                          <ListItemText
+                            primary={menuItem.title}
+                            primaryTypographyProps={{
+                              fontSize: 14,
+                              fontWeight: isActive(menuItem.href) ? 600 : 400,
+                              color: isActive(menuItem.href) ? 'primary.main' : 'text.primary'
+                            }}
+                          />
+                          {!routeExists && (
+                            <Chip
+                              label="Soon"
+                              size="small"
+                              sx={{
+                                height: 20,
+                                fontSize: '0.65rem',
+                                fontWeight: 600,
+                                bgcolor: 'warning.light',
+                                color: 'warning.dark',
+                                borderRadius: 1
+                              }}
+                            />
+                          )}
+                        </>
                       )}
                     </ListItemButton>
                   </ListItem>
@@ -376,47 +409,67 @@ export const Sidebar = ({ logo, onLogout, sidebarService }) => {
                   {/* Submenu Items */}
                   <Collapse in={isExpanded && open} timeout="auto" unmountOnExit>
                     <List component="div" disablePadding>
-                      {menuItem.children?.map((child, childIndex) => (
-                        <ListItem
-                          key={`${menuId}-child-${childIndex}`}
-                          disablePadding
-                          sx={{ mb: 0.3 }}
-                        >
-                          <ListItemButton
-                            onClick={() => handleNavigation(child.href)}
-                            sx={{
-                              borderRadius: 2,
-                              mx: 1,
-                              pl: 6,
-                              pr: 2,
-                              py: 0.8,
-                              bgcolor: isActive(child.href) ? 'primary.light' : 'transparent',
-                              '&:hover': {
-                                bgcolor: isActive(child.href) ? 'primary.light' : 'action.hover'
-                              }
-                            }}
+                      {menuItem.children?.map((child, childIndex) => {
+                        const childRouteExists = checkRouteExists(child.href)
+
+                        return (
+                          <ListItem
+                            key={`${menuId}-child-${childIndex}`}
+                            disablePadding
+                            sx={{ mb: 0.3 }}
                           >
-                            <Box
+                            <ListItemButton
+                              onClick={() => childRouteExists && handleNavigation(child.href)}
+                              disabled={!childRouteExists}
                               sx={{
-                                width: 6,
-                                height: 6,
-                                borderRadius: '50%',
-                                bgcolor: isActive(child.href) ? 'primary.main' : 'text.secondary',
-                                mr: 2,
-                                flexShrink: 0
+                                borderRadius: 2,
+                                mx: 1,
+                                pl: 6,
+                                pr: 2,
+                                py: 0.8,
+                                bgcolor: isActive(child.href) ? 'primary.light' : 'transparent',
+                                '&:hover': {
+                                  bgcolor: isActive(child.href) ? 'primary.light' : 'action.hover'
+                                },
+                                opacity: childRouteExists ? 1 : 0.6
                               }}
-                            />
-                            <ListItemText
-                              primary={child.title}
-                              primaryTypographyProps={{
-                                fontSize: 13,
-                                fontWeight: isActive(child.href) ? 600 : 400,
-                                color: isActive(child.href) ? 'primary.main' : 'text.primary'
-                              }}
-                            />
-                          </ListItemButton>
-                        </ListItem>
-                      ))}
+                            >
+                              <Box
+                                sx={{
+                                  width: 6,
+                                  height: 6,
+                                  borderRadius: '50%',
+                                  bgcolor: isActive(child.href) ? 'primary.main' : 'text.secondary',
+                                  mr: 2,
+                                  flexShrink: 0
+                                }}
+                              />
+                              <ListItemText
+                                primary={child.title}
+                                primaryTypographyProps={{
+                                  fontSize: 13,
+                                  fontWeight: isActive(child.href) ? 600 : 400,
+                                  color: isActive(child.href) ? 'primary.main' : 'text.primary'
+                                }}
+                              />
+                              {!childRouteExists && (
+                                <Chip
+                                  label="Soon"
+                                  size="small"
+                                  sx={{
+                                    height: 18,
+                                    fontSize: '0.6rem',
+                                    fontWeight: 600,
+                                    bgcolor: 'warning.light',
+                                    color: 'warning.dark',
+                                    borderRadius: 1
+                                  }}
+                                />
+                              )}
+                            </ListItemButton>
+                          </ListItem>
+                        )
+                      })}
                     </List>
                   </Collapse>
                 </Box>

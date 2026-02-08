@@ -9,3 +9,6 @@ export const timeDebounce = 500
 
 const userLogin = localStorage.getItem('userLogin')
 export const userData = userLogin ? JSON.parse(userLogin) : null
+
+const outlets = localStorage.getItem('outlets')
+export const listOutlets = outlets ? JSON.parse(outlets) : []
