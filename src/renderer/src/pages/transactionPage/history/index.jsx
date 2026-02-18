@@ -465,12 +465,11 @@ export const HistoryTransactionPage = () => {
           variant="contained"
           startIcon={<IconPlus size={20} />}
           onClick={() => {
-            navigate('/transaction/create')
-            // if (localStorage.getItem('outletCategoryId') == 1) {
-            //   navigate('/transaction/instore')
-            // } else {
-            //   navigate('/transaction/create')
-            // }
+            if (localStorage.getItem('outletCategoryId') == 1) {
+              navigate('/transaction/instore')
+            } else {
+              navigate('/transaction/create')
+            }
           }}
         >
           Transaksi Baru

@@ -7,7 +7,9 @@ import {
   HistoryTransactionPage,
   InstoreTransactionPage,
   DetailTransactionPage,
-  FrontOfficeDashboardPage
+  FrontOfficeDashboardPage,
+  ProductPage,
+  AddProductPage
 } from '@renderer/pages'
 import { CreateTransactionPage } from '@renderer/pages/transactionPage/create'
 
@@ -70,6 +72,21 @@ export const appRoutes = [
   {
     path: '/transaction/detail/:id',
     element: <DetailTransactionPage />,
+    active: true,
+    protected: true,
+    redirectTo: '/login'
+  },
+
+  {
+    path: '/product/list',
+    element: <ProductPage />,
+    active: true,
+    protected: true,
+    redirectTo: '/login'
+  },
+  {
+    path: '/product/add',
+    element: <AddProductPage />,
     active: true,
     protected: true,
     redirectTo: '/login'

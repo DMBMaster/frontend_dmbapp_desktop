@@ -117,6 +117,7 @@ export const TitleBar = ({ username, theme = 'light', onLogout, showUpdateButton
 
       // Save to localStorage
       localStorage.setItem('outletId', String(outlet.id))
+      localStorage.setItem('selectedOutlet', JSON.stringify(outlet))
       localStorage.setItem('outletGuid', outlet.guid || '')
       localStorage.setItem('outletName', outlet.name)
       localStorage.setItem('outletPhone', outlet.phone)

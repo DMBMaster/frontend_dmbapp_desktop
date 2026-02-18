@@ -70,6 +70,41 @@ const ProductService = () => {
     }
   }
 
+  const getProductsV2 = async (params) => {
+    const outletGuid = getOutletGuid()
+
+    // Check network status FIRST - skip API call if offline
+    if (!isOnline()) {
+      console.log('📴 Offline detected → Loading products from cache directly')
+      return getProductsFromCache(outletGuid)
+    }
+
+    try {
+      // ===== ONLINE - TRY API =====
+      const res = await axiosInstance.get('/product-service/v2/products', { params })
+      const responseData = res.data
+
+      // Cache ke Dexie (replace existing cache for this outlet)
+      if (Array.isArray(responseData?.data)) {
+        await localdb.products.where({ outlet_guid: outletGuid }).delete()
+        await localdb.products.bulkAdd(
+          responseData.data.map((product) => ({
+            outlet_guid: outletGuid,
+            product_guid: product.guid,
+            data: product,
+            updated_at: new Date().toISOString()
+          }))
+        )
+      }
+
+      return responseData
+    } catch (error) {
+      // API call failed - try cache
+      console.warn('⚠️ API failed → Loading products from cache')
+      return getProductsFromCache(outletGuid, error)
+    }
+  }
+
   // Helper: Get products from cache
   const getProductsFromCache = async (outletGuid, originalError) => {
     const cached = await localdb.products.where({ outlet_guid: outletGuid }).toArray()
@@ -160,7 +195,7 @@ const ProductService = () => {
     if (isOnline()) {
       try {
         // ===== TRY ONLINE =====
-        const res = await axiosInstance.post('product-service/products', payload)
+        const res = await axiosInstance.post('product-service/product', payload)
         return res.data
       } catch (err) {
         // Network error, save to pending queue
@@ -188,6 +223,38 @@ const ProductService = () => {
         offline: true,
         pending: true
       }
+    }
+  }
+
+  const getUnitsProducts = async () => {
+    const outletGuid = getOutletGuid()
+
+    if (!isOnline()) {
+      console.log('📴 Offline detected → Loading units from cache directly')
+      return getUnitsFromCache(outletGuid)
+    }
+
+    try {
+      const response = await axiosInstance.get('/product-service/satuan')
+      const responseData = response.data
+
+      // Cache ke Dexie
+      if (Array.isArray(responseData?.data)) {
+        await localdb.units.where({ outlet_guid: outletGuid }).delete()
+        await localdb.units.bulkAdd(
+          responseData.data.map((unit) => ({
+            outlet_guid: outletGuid,
+            unit_id: unit.guid || unit.id,
+            data: unit,
+            updated_at: new Date().toISOString()
+          }))
+        )
+      }
+
+      return responseData
+    } catch (error) {
+      console.warn('⚠️ API failed → Loading units from cache')
+      return getUnitsFromCache(outletGuid, error)
     }
   }
 
@@ -366,15 +433,42 @@ const ProductService = () => {
     }
   }
 
+  const getUnitsFromCache = async (outletGuid, originalError) => {
+    const cached = await localdb.units.where({ outlet_guid: outletGuid }).toArray()
+
+    if (!cached?.length) {
+      if (originalError) throw originalError
+      return {
+        status: 'ok',
+        status_code: 200,
+        message: 'Tidak ada data cache',
+        error: '',
+        data: [],
+        offline: true
+      }
+    }
+
+    return {
+      status: 'ok',
+      status_code: 200,
+      message: 'Data dari cache offline',
+      error: '',
+      data: cached.map((c) => c.data),
+      offline: true
+    }
+  }
+
   return {
     getProducts,
+    getProductsV2,
     getProductDetail,
     createProduct,
     updateProduct,
     deleteProduct,
     syncPendingProducts,
     getPendingCount,
-    clearCache
+    clearCache,
+    getUnitsProducts
   }
 }
 

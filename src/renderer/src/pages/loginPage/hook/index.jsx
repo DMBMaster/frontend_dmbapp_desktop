@@ -60,6 +60,7 @@ export const useIndex = () => {
 
         if (outlets && outlets.length > 0) {
           localStorage.setItem('outlets', JSON.stringify(response?.outlets))
+          localStorage.setItem('selectedOutlet', JSON.stringify(outlets[0]))
           if (employee) {
             localStorage.setItem('employee', JSON.stringify(employee))
           }

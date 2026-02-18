@@ -11,4 +11,9 @@ const userLogin = localStorage.getItem('userLogin')
 export const userData = userLogin ? JSON.parse(userLogin) : null
 
 const outlets = localStorage.getItem('outlets')
+const userRoleTemp = localStorage.getItem('sidebar_cache')
+const selectedOutletTemp = localStorage.getItem('selectedOutlet')
+
+export const userRole = userRoleTemp ? JSON.parse(userRoleTemp) : null
 export const listOutlets = outlets ? JSON.parse(outlets) : []
+export const selectedOutlet = selectedOutletTemp ? JSON.parse(selectedOutletTemp) : null

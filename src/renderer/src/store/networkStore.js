@@ -161,6 +161,7 @@ export const initNetworkListeners = () => {
   registerTransactionDetailSyncFunction()
   registerReservationSyncFunction()
   registerCheckoutSyncFunction()
+  registerProductSyncFunction()
 
   // Return cleanup function
   return () => {
@@ -174,7 +175,66 @@ export const initNetworkListeners = () => {
     unregisterSyncFunction('transactionDetail')
     unregisterSyncFunction('reservations')
     unregisterSyncFunction('checkouts')
+    unregisterSyncFunction('products')
   }
+}
+
+// ================================
+// REGISTER PRODUCTS SYNC FUNCTION
+// ================================
+const registerProductSyncFunction = () => {
+  registerSyncFunction('products', async () => {
+    const { localdb } = await import('@renderer/config/localdb')
+    const { createStandaloneAxios } = await import('@renderer/api/axiosInstance')
+
+    const axiosInstance = createStandaloneAxios()
+    let synced = 0
+    let failed = 0
+
+    try {
+      // Pending product creates/updates
+      const allPendingProducts = await localdb.pendingProducts.toArray()
+      const pendingCreates = allPendingProducts.filter((p) => p.synced === false)
+
+      console.log(`📤 Found ${pendingCreates.length} pending products to sync`)
+
+      for (const item of pendingCreates) {
+        try {
+          await axiosInstance.post('product-service/products', item.payload)
+          await localdb.pendingProducts.delete(item.id)
+          synced++
+          console.log(`✅ Synced product pending ID: ${item.id}`)
+        } catch (err) {
+          console.error('Failed to sync pending product:', err)
+          failed++
+        }
+      }
+
+      // Pending product deletes
+      const allPendingDeletes = await localdb.pendingDeletes.toArray()
+      const pendingDeletes = allPendingDeletes.filter(
+        (p) => p.entity_type === 'product' && p.synced === false
+      )
+
+      console.log(`📤 Found ${pendingDeletes.length} pending product deletes to sync`)
+
+      for (const item of pendingDeletes) {
+        try {
+          await axiosInstance.delete(`product-service/products/${item.entity_guid}`)
+          await localdb.pendingDeletes.delete(item.id)
+          synced++
+          console.log(`✅ Synced product delete ID: ${item.id}`)
+        } catch (err) {
+          console.error('Failed to sync pending product delete:', err)
+          failed++
+        }
+      }
+    } catch (error) {
+      console.error('Error in products sync:', error)
+    }
+
+    return { synced, failed }
+  })
 }
 
 // ================================
