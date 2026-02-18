@@ -145,7 +145,7 @@ const ProductService = () => {
 
     try {
       // ===== ONLINE - TRY API =====
-      const res = await axiosInstance.get(`product-service/products/${guid}`)
+      const res = await axiosInstance.get(`/product-service/product-detail/${guid}`)
       const detail = res.data?.data
 
       // Cache ke Dexie
@@ -195,7 +195,7 @@ const ProductService = () => {
     if (isOnline()) {
       try {
         // ===== TRY ONLINE =====
-        const res = await axiosInstance.post('product-service/product', payload)
+        const res = await axiosInstance.post('/product-service/product', payload)
         return res.data
       } catch (err) {
         // Network error, save to pending queue
@@ -273,7 +273,7 @@ const ProductService = () => {
   // ============================
   const updateProduct = async (guid, payload) => {
     try {
-      const res = await axiosInstance.put(`product-service/products/${guid}`, payload)
+      const res = await axiosInstance.post(`/product-service/product/${guid}`, payload)
 
       // Update cache if exists
       const cached = await localdb.productDetails.get(guid)
@@ -300,7 +300,7 @@ const ProductService = () => {
 
     if (isOnline()) {
       try {
-        const res = await axiosInstance.delete(`product-service/products/${guid}`)
+        const res = await axiosInstance.delete(`/product-service/products/${guid}`)
 
         // Remove from cache
         await localdb.products.where({ product_guid: guid }).delete()
@@ -369,7 +369,7 @@ const ProductService = () => {
 
     for (const item of pendingCreates) {
       try {
-        await axiosInstance.post('product-service/products', item.payload)
+        await axiosInstance.post('/product-service/products', item.payload)
         await localdb.pendingProducts.delete(item.id)
         synced++
       } catch (err) {
@@ -386,7 +386,7 @@ const ProductService = () => {
 
     for (const item of pendingDeletes) {
       try {
-        await axiosInstance.delete(`product-service/products/${item.entity_guid}`)
+        await axiosInstance.delete(`/product-service/products/${item.entity_guid}`)
         await localdb.pendingDeletes.delete(item.id)
         synced++
       } catch (err) {

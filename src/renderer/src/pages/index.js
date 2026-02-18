@@ -4,11 +4,13 @@ import { HomePage } from './homePage'
 import { FrontOfficeDashboardPage } from './homePage/frontOffice'
 import { InfoAppPage } from './infoAppPage'
 import { LoginPage } from './loginPage'
-import { ProductPage } from './productsPage/listPage'
-import { AddProductPage } from './productsPage/listPage/add'
+import { ProductPage } from './productsPage/list'
+import { AddProductPage } from './productsPage/add'
 import { DetailTransactionPage } from './transactionPage/detail'
 import { HistoryTransactionPage } from './transactionPage/history'
 import { InstoreTransactionPage } from './transactionPage/instore'
+import { EditProductPage } from './productsPage/edit'
+import { CreateTransactionPage } from './transactionPage/create'
 
 export {
   HomePage,
@@ -21,5 +23,7 @@ export {
   DetailTransactionPage,
   FrontOfficeDashboardPage,
   ProductPage,
-  AddProductPage
+  AddProductPage,
+  EditProductPage,
+  CreateTransactionPage
 }

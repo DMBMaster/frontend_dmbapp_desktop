@@ -58,6 +58,7 @@ export const AddProductPage = () => {
       )}
 
       <Breadcrumb
+        showBackButton={true}
         title="Tambah Produk"
         items={[
           { to: '/', title: 'Home' },

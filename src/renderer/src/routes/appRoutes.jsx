@@ -9,9 +9,10 @@ import {
   DetailTransactionPage,
   FrontOfficeDashboardPage,
   ProductPage,
-  AddProductPage
+  AddProductPage,
+  EditProductPage,
+  CreateTransactionPage
 } from '@renderer/pages'
-import { CreateTransactionPage } from '@renderer/pages/transactionPage/create'
 
 export const appRoutes = [
   // =============== PUBLIC ROUTES ===============
@@ -87,6 +88,13 @@ export const appRoutes = [
   {
     path: '/product/add',
     element: <AddProductPage />,
+    active: true,
+    protected: true,
+    redirectTo: '/login'
+  },
+  {
+    path: '/product/edit/:id',
+    element: <EditProductPage />,
     active: true,
     protected: true,
     redirectTo: '/login'

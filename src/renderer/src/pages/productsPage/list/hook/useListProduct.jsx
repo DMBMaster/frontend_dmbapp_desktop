@@ -21,13 +21,14 @@ import {
   Tooltip,
   Typography
 } from '@mui/material'
-import { Link, useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { IconEdit, IconEye, IconTrash } from '@tabler/icons-react'
 import { formatRupiah, getImgUrl } from '@renderer/utils/myFunctions'
 
 const columnHelper = createColumnHelper()
 
 export const UseListProduct = () => {
+  const navigate = useNavigate()
   const notifier = useNotifier()
   const productService = ProductService()
 
@@ -297,8 +298,9 @@ export const UseListProduct = () => {
               <Tooltip title="Edit">
                 <IconButton
                   color="success"
-                  component={Link}
-                  href={`/product/edit/${info.row.original.guid}`}
+                  onClick={() => {
+                    navigate(`/product/edit/${info.row.original.guid}`)
+                  }}
                 >
                   <IconEdit width={22} />
                 </IconButton>
@@ -308,8 +310,9 @@ export const UseListProduct = () => {
               <Tooltip title="View">
                 <IconButton
                   color="primary"
-                  component={Link}
-                  href={`/product/detail/${info.row.original.guid}`}
+                  onClick={() => {
+                    navigate(`/product/detail/${info.row.original.guid}`)
+                  }}
                 >
                   <IconEye width={22} />
                 </IconButton>
