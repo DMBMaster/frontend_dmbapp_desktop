@@ -98,7 +98,8 @@ export const UseDetail = () => {
   const fetchDataMultiSatuan = async () => {
     try {
       setLoading((prev) => ({ ...prev, fetchDataMultiSatuan: true }))
-      const response = await productService.getMultiSatuan(id)
+      const params = { product_id: id }
+      const response = await productService.getMultiSatuanProducts(params)
       setMultiSatuan(response.data || [])
     } catch (error) {
       showError('Gagal Mengambil Data Multi Satuan', error)
@@ -110,7 +111,8 @@ export const UseDetail = () => {
   const fetchDataMultiHarga = async (productId) => {
     try {
       setLoading((prev) => ({ ...prev, fetchDataMultiHarga: true }))
-      const response = await productService.getMultiHarga(productId)
+      const params = { product_id: productId }
+      const response = await productService.getMultiHarga(params)
       setMultiHarga(response.data || [])
     } catch (error) {
       showError('Gagal Mengambil Data Multi Harga', error)
@@ -122,7 +124,7 @@ export const UseDetail = () => {
   const fetchDataUnit = async () => {
     try {
       setLoading((prev) => ({ ...prev, fetchDataUnit: true }))
-      const response = await productService.getUnits()
+      const response = await productService.getUnitsProducts()
       setUnits(response.data || [])
     } catch (error) {
       showError('Gagal Mengambil Data Satuan', error)
@@ -132,11 +134,14 @@ export const UseDetail = () => {
   }
 
   const fetchDataProduction = async () => {
+    if (!id) return
     try {
       setLoading((prev) => ({ ...prev, fetchDataProduction: true }))
       const response = await productService.getProductions(id)
       setProductions(response.data || [])
     } catch (error) {
+      console.log('jajaj', error)
+
       showError('Gagal Mengambil Data Produksi/Resep', error)
     } finally {
       setLoading((prev) => ({ ...prev, fetchDataProduction: false }))

@@ -2,54 +2,24 @@ import { useAxiosInstance } from '@renderer/api/axiosInstance'
 import { localdb } from '@renderer/config/localdb'
 import { useNetworkStore } from '@renderer/store/networkStore'
 
-// ================================
-// PAYLOAD INTERFACES
-// ================================
-export const IPayloadProduct = {
-  // outlet_id?: string
-  // name: string
-  // descriptions?: string
-  // price: number
-  // base_price?: number
-  // stock?: number
-  // category_id?: string
-  // images?: string | File | null
-  // featured_image?: string | File | null
-  // published?: boolean
-  // type?: string
-  // barcode?: string
-}
-
-// ================================
-// HELPER: Check if online from Zustand store
-// ================================
 const isOnline = () => useNetworkStore.getState().isOnline
 
-// ================================
-// SERVICE IMPLEMENTATION
-// ================================
 const ProductService = () => {
   const axiosInstance = useAxiosInstance()
   const getOutletGuid = () => localStorage.getItem('outletGuid')
 
-  // ============================
-  // GET PRODUCTS LIST
-  // ============================
   const getProducts = async (params) => {
     const outletGuid = getOutletGuid()
 
-    // Check network status FIRST - skip API call if offline
     if (!isOnline()) {
       console.log('📴 Offline detected → Loading products from cache directly')
       return getProductsFromCache(outletGuid)
     }
 
     try {
-      // ===== ONLINE - TRY API =====
       const res = await axiosInstance.get('/product-service/products', { params })
       const responseData = res.data
 
-      // Cache ke Dexie (replace existing cache for this outlet)
       if (Array.isArray(responseData?.data)) {
         await localdb.products.where({ outlet_guid: outletGuid }).delete()
         await localdb.products.bulkAdd(
@@ -64,7 +34,6 @@ const ProductService = () => {
 
       return responseData
     } catch (error) {
-      // API call failed - try cache
       console.warn('⚠️ API failed → Loading products from cache')
       return getProductsFromCache(outletGuid, error)
     }
@@ -73,18 +42,15 @@ const ProductService = () => {
   const getProductsV2 = async (params) => {
     const outletGuid = getOutletGuid()
 
-    // Check network status FIRST - skip API call if offline
     if (!isOnline()) {
       console.log('📴 Offline detected → Loading products from cache directly')
       return getProductsFromCache(outletGuid)
     }
 
     try {
-      // ===== ONLINE - TRY API =====
       const res = await axiosInstance.get('/product-service/v2/products', { params })
       const responseData = res.data
 
-      // Cache ke Dexie (replace existing cache for this outlet)
       if (Array.isArray(responseData?.data)) {
         await localdb.products.where({ outlet_guid: outletGuid }).delete()
         await localdb.products.bulkAdd(
@@ -99,13 +65,11 @@ const ProductService = () => {
 
       return responseData
     } catch (error) {
-      // API call failed - try cache
       console.warn('⚠️ API failed → Loading products from cache')
       return getProductsFromCache(outletGuid, error)
     }
   }
 
-  // Helper: Get products from cache
   const getProductsFromCache = async (outletGuid, originalError) => {
     const cached = await localdb.products.where({ outlet_guid: outletGuid }).toArray()
 
@@ -131,24 +95,18 @@ const ProductService = () => {
     }
   }
 
-  // ============================
-  // GET PRODUCT DETAIL
-  // ============================
   const getProductDetail = async (guid) => {
     const outletGuid = getOutletGuid()
 
-    // Check network status FIRST
     if (!isOnline()) {
       console.log('📴 Offline detected → Loading product detail from cache directly')
       return getProductDetailFromCache(guid)
     }
 
     try {
-      // ===== ONLINE - TRY API =====
       const res = await axiosInstance.get(`/product-service/product-detail/${guid}`)
       const detail = res.data?.data
 
-      // Cache ke Dexie
       if (detail) {
         await localdb.productDetails.put({
           guid: detail.guid,
@@ -160,13 +118,11 @@ const ProductService = () => {
 
       return res.data
     } catch (error) {
-      // API call failed - try cache
       console.warn('⚠️ API failed → Loading product detail from cache')
       return getProductDetailFromCache(guid, error)
     }
   }
 
-  // Helper: Get product detail from cache
   const getProductDetailFromCache = async (guid, originalError) => {
     const cached = await localdb.productDetails.get(guid)
 
@@ -185,20 +141,14 @@ const ProductService = () => {
     }
   }
 
-  // ============================
-  // CREATE PRODUCT
-  // ============================
   const createProduct = async (payload) => {
     const outletGuid = getOutletGuid()
 
-    // Check if online
     if (isOnline()) {
       try {
-        // ===== TRY ONLINE =====
         const res = await axiosInstance.post('/product-service/product', payload)
         return res.data
       } catch (err) {
-        // Network error, save to pending queue
         console.warn('⚠️ Create failed → Saving to offline queue', err)
         await saveToPendingQueue(outletGuid, payload)
 
@@ -212,7 +162,6 @@ const ProductService = () => {
         }
       }
     } else {
-      // ===== OFFLINE MODE =====
       await saveToPendingQueue(outletGuid, payload)
 
       return {
@@ -238,7 +187,6 @@ const ProductService = () => {
       const response = await axiosInstance.get('/product-service/satuan')
       const responseData = response.data
 
-      // Cache ke Dexie
       if (Array.isArray(responseData?.data)) {
         await localdb.units.where({ outlet_guid: outletGuid }).delete()
         await localdb.units.bulkAdd(
@@ -258,7 +206,94 @@ const ProductService = () => {
     }
   }
 
-  // Helper: Save to pending queue
+  const getMultiSatuanProducts = async (params) => {
+    try {
+      const response = await axiosInstance.get(`/product-service/product-satuan`, { params })
+      return response.data
+    } catch (error) {
+      console.error(error)
+      throw error
+    }
+  }
+
+  const getMultiHarga = async (params) => {
+    try {
+      const response = await axiosInstance.get(`/product-service/product-price-level`, { params })
+      return response.data
+    } catch (error) {
+      console.error(error)
+      throw error
+    }
+  }
+
+  const getProductions = async (id) => {
+    try {
+      const response = await axiosInstance.get(`/product-service/stock-production/${id}/product`)
+      return response.data
+    } catch (error) {
+      console.error(error)
+      throw error
+    }
+  }
+
+  const createProductSatuan = async (data) => {
+    try {
+      const response = await axiosInstance.post(`/product-service/product-satuan`, data)
+      return response.data
+    } catch (error) {
+      console.error(error)
+      throw error
+    }
+  }
+
+  const deleteProductSatuan = async (id) => {
+    try {
+      const response = await axiosInstance.delete(`/product-service/product-satuan/${id}`)
+      return response.data
+    } catch (error) {
+      console.error(error)
+      throw error
+    }
+  }
+
+  const createProductPriceLevel = async (data) => {
+    try {
+      const response = await axiosInstance.post(`/product-service/product-price-level`, data)
+      return response.data
+    } catch (error) {
+      console.error(error)
+      throw error
+    }
+  }
+
+  const deleteProductPriceLevel = async (id) => {
+    try {
+      const response = await axiosInstance.delete(`/product-service/product-price-level/${id}`)
+      return response.data
+    } catch (error) {
+      console.error(error)
+      throw error
+    }
+  }
+  const createStockProduction = async (data) => {
+    try {
+      const response = await axiosInstance.post(`/product-service/stock-production`, data)
+      return response.data
+    } catch (error) {
+      console.error(error)
+      throw error
+    }
+  }
+  const updateStockProduction = async (id, data) => {
+    try {
+      const response = await axiosInstance.put(`/product-service/stock-production/${id}`, data)
+      return response.data
+    } catch (error) {
+      console.error(error)
+      throw error
+    }
+  }
+
   const saveToPendingQueue = async (outletGuid, payload) => {
     await localdb.pendingProducts.add({
       outlet_guid: outletGuid,
@@ -268,14 +303,10 @@ const ProductService = () => {
     })
   }
 
-  // ============================
-  // UPDATE PRODUCT
-  // ============================
   const updateProduct = async (guid, payload) => {
     try {
       const res = await axiosInstance.post(`/product-service/product/${guid}`, payload)
 
-      // Update cache if exists
       const cached = await localdb.productDetails.get(guid)
       if (cached && cached.data) {
         const existingData = cached.data
@@ -292,9 +323,6 @@ const ProductService = () => {
     }
   }
 
-  // ============================
-  // DELETE PRODUCT
-  // ============================
   const deleteProduct = async (guid) => {
     const outletGuid = getOutletGuid()
 
@@ -302,13 +330,11 @@ const ProductService = () => {
       try {
         const res = await axiosInstance.delete(`/product-service/products/${guid}`)
 
-        // Remove from cache
         await localdb.products.where({ product_guid: guid }).delete()
         await localdb.productDetails.delete(guid)
 
         return res.data
       } catch (err) {
-        // Save delete to pending queue
         console.warn('⚠️ Delete failed → Saving to offline queue', err)
         await localdb.pendingDeletes.add({
           outlet_guid: outletGuid,
@@ -318,7 +344,6 @@ const ProductService = () => {
           synced: false
         })
 
-        // Remove from local cache anyway
         await localdb.products.where({ product_guid: guid }).delete()
         await localdb.productDetails.delete(guid)
 
@@ -332,7 +357,6 @@ const ProductService = () => {
         }
       }
     } else {
-      // Offline: queue delete
       await localdb.pendingDeletes.add({
         outlet_guid: outletGuid,
         entity_type: 'product',
@@ -341,7 +365,6 @@ const ProductService = () => {
         synced: false
       })
 
-      // Remove from local cache
       await localdb.products.where({ product_guid: guid }).delete()
       await localdb.productDetails.delete(guid)
 
@@ -356,14 +379,10 @@ const ProductService = () => {
     }
   }
 
-  // ============================
-  // SYNC PENDING PRODUCTS
-  // ============================
   const syncPendingProducts = async () => {
     let synced = 0
     let failed = 0
 
-    // Get all and filter - more reliable than compound query with boolean
     const allPendingProducts = await localdb.pendingProducts.toArray()
     const pendingCreates = allPendingProducts.filter((p) => p.synced === false)
 
@@ -378,7 +397,6 @@ const ProductService = () => {
       }
     }
 
-    // Sync pending deletes
     const allPendingDeletes = await localdb.pendingDeletes.toArray()
     const pendingDeletes = allPendingDeletes.filter(
       (p) => p.entity_type === 'product' && p.synced === false
@@ -398,13 +416,9 @@ const ProductService = () => {
     return { synced, failed }
   }
 
-  // ============================
-  // GET PENDING COUNT
-  // ============================
   const getPendingCount = async () => {
     const outletGuid = getOutletGuid()
 
-    // Get all and filter - more reliable than compound query with boolean
     const [allPendingProducts, allPendingDeletes] = await Promise.all([
       localdb.pendingProducts.toArray(),
       localdb.pendingDeletes.toArray()
@@ -420,9 +434,6 @@ const ProductService = () => {
     return creates + deletes
   }
 
-  // ============================
-  // CLEAR CACHE
-  // ============================
   const clearCache = async () => {
     const outletGuid = getOutletGuid()
     if (outletGuid) {
@@ -468,7 +479,16 @@ const ProductService = () => {
     syncPendingProducts,
     getPendingCount,
     clearCache,
-    getUnitsProducts
+    getUnitsProducts,
+    getMultiSatuanProducts,
+    getMultiHarga,
+    getProductions,
+    createProductSatuan,
+    deleteProductSatuan,
+    createProductPriceLevel,
+    deleteProductPriceLevel,
+    createStockProduction,
+    updateStockProduction
   }
 }
 

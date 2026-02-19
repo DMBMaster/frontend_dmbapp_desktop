@@ -364,7 +364,7 @@ function startNetworkMonitoring() {
   networkCheckInterval = setInterval(async () => {
     const isOnline = await checkInternetConnectivity()
     sendNetworkStatus(isOnline)
-  }, 10000)
+  }, 1000)
 }
 
 /**

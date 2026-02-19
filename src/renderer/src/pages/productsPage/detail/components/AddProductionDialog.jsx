@@ -1,3 +1,4 @@
+/* eslint-disable react/prop-types */
 import { useState, useEffect } from 'react'
 import {
   Dialog,
@@ -35,15 +36,14 @@ const AddItemDialog = ({ open, onClose, handleUpdate, updatedData }) => {
     const fetchProducts = async () => {
       setLoading(true)
       try {
-        const response = await productService.getProducts('/product-service/products', {
-          params: {
-            outletId: localStorage.getItem('outletGuid'),
-            ob: 'id',
-            d: 'DESC',
-            is_inventory: true
-          }
-        })
-        setProducts(response.data.data)
+        const params = {
+          outletId: localStorage.getItem('outletGuid'),
+          ob: 'id',
+          d: 'DESC',
+          is_inventory: true
+        }
+        const response = await productService.getProducts(params)
+        setProducts(response.data)
       } catch (error) {
         console.error('Error fetching products:', error)
       } finally {

@@ -329,7 +329,7 @@ export const DetailProductPage = () => {
                           <DialogTitle sx={{ mt: 1 }}>Tambah Multi Satuan</DialogTitle>
                           <DialogContent>
                             <Box component="form" noValidate autoComplete="off">
-                              <Grid spacing={2} mt={0.5}>
+                              <Grid spacing={2} mt={0.5} container>
                                 <Grid size={{ xs: 12 }}>
                                   <Autocomplete
                                     value={
@@ -665,7 +665,7 @@ export const DetailProductPage = () => {
                           <DialogTitle sx={{ mt: 1 }}>Tambah Multi Harga</DialogTitle>
                           <DialogContent>
                             <Box component="form" noValidate autoComplete="off">
-                              <Grid spacing={2} mt={0.5}>
+                              <Grid spacing={2} mt={0.5} container>
                                 <Grid size={{ xs: 12 }}>
                                   <TextField
                                     label="Minimal Qty"
