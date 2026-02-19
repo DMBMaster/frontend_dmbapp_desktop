@@ -40,9 +40,11 @@ import {
 import { Update as UpdateIcon } from '@mui/icons-material'
 import { useNetworkStore, initNetworkListeners } from '@renderer/store/networkStore'
 import { localdb } from '@renderer/config/localdb'
+import { useConfigStore } from '@renderer/store/configProvider'
 
 // eslint-disable-next-line react/prop-types
 export const TitleBar = ({ username, theme = 'light', onLogout, showUpdateButton = false }) => {
+  const { config } = useConfigStore.getState()
   // OUTLET LOGIC
   const userStr = localStorage.getItem('userLogin')
   const user = userStr ? JSON.parse(userStr) : null
@@ -303,6 +305,64 @@ export const TitleBar = ({ username, theme = 'light', onLogout, showUpdateButton
     return () => unsubscribe()
   }, [fetchPendingCount])
 
+  useEffect(() => {
+    const testAndPrint = async () => {
+      console.log('printt')
+
+      try {
+        // 1. Test koneksi dulu
+        const testResult = await window.api.testThermalPrinter({
+          printerIp: config.printer_ip,
+          printerPort: config.printer_port
+        })
+        console.log('Koneksi printer:', testResult)
+
+        if (!testResult.connected) {
+          console.error('Printer tidak terhubung:', testResult.error)
+          return
+        }
+
+        // 2. Kalau connected, langsung print
+        const result = await window.api.printThermalLan({
+          printerIp: config.printer_ip,
+          printerPort: config.printer_port,
+
+          header1: 'NAMA TOKO',
+          header2: 'Jl. Alamat No. 1',
+          header3: 'Telp: 08123456789',
+
+          orderNumber: 'ORD-001',
+          date: '19/02/2025 10:30',
+          cashierName: 'Budi',
+
+          items: [
+            { name: 'Nasi Goreng', qty: 2, price: 'Rp15.000', subtotal: 'Rp30.000' },
+            { name: 'Es Teh', qty: 1, price: 'Rp5.000', subtotal: 'Rp5.000' }
+          ],
+
+          subtotal: 'Rp35.000',
+          tax: 'Rp3.500',
+          total: 'Rp38.500',
+          cash: 'Rp50.000',
+          change: 'Rp11.500',
+
+          footer1: 'Terima Kasih!',
+          footer2: 'Selamat Datang Kembali'
+        })
+
+        if (result.success) {
+          console.log('✅ Print berhasil!')
+        } else {
+          console.error('❌ Print gagal:', result.error)
+        }
+      } catch (error) {
+        console.error('Error:', error)
+      }
+    }
+
+    testAndPrint()
+  }, [])
+
   return (
     <>
       <AppBar
@@ -471,7 +531,7 @@ export const TitleBar = ({ username, theme = 'light', onLogout, showUpdateButton
                 }}
                 aria-label="Minimize"
               >
-                <Minimize sx={{ color: 'white', fontSize: 18 }} />
+                <Minimize sx={{ color: 'white', fontSize: 18, mb: '12px' }} />
               </IconButton>
               <IconButton
                 size="small"

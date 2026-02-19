@@ -11,6 +11,7 @@ import { HistoryTransactionPage } from './transactionPage/history'
 import { InstoreTransactionPage } from './transactionPage/instore'
 import { EditProductPage } from './productsPage/edit'
 import { CreateTransactionPage } from './transactionPage/create'
+import { DetailProductPage } from './productsPage/detail'
 
 export {
   HomePage,
@@ -25,5 +26,6 @@ export {
   ProductPage,
   AddProductPage,
   EditProductPage,
+  DetailProductPage,
   CreateTransactionPage
 }

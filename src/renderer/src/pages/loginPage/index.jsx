@@ -5,7 +5,7 @@ import { useIndex } from './hook'
 import { useConfigStore } from '../../store/configProvider'
 
 export const LoginPage = () => {
-  const { formLogin, handleChange, loading, errorFormLogin, handleLogin } = useIndex()
+  const { formLogin, handleChange, loading, errorFormLogin, handleLogin, appVersion } = useIndex()
   const { assetsPathConfig } = useConfigStore()
   const [showPassword, setShowPassword] = useState(false)
 
@@ -46,22 +46,25 @@ export const LoginPage = () => {
         >
           <Box
             sx={{
-              width: 40,
-              height: 40,
-              bgcolor: '#DD5070',
+              marginTop: '20px',
+              width: 80,
+              height: 80,
               borderRadius: 1,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center'
             }}
           >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
-              <path d="M3 3h8v8H3V3zm10 0h8v8h-8V3zM3 13h8v8H3v-8zm10 0h8v8h-8v-8z" />
-            </svg>
+            <img
+              src={`${assetsPathConfig}\\images\\logo.png`}
+              alt="Logo"
+              style={{ width: 80, height: 80 }}
+            />
           </Box>
           <Typography
             sx={{
-              fontSize: '1.5rem',
+              marginTop: '20px',
+              fontSize: '2rem',
               fontWeight: 700,
               color: '#DD5070',
               letterSpacing: '0.5px'
@@ -280,7 +283,7 @@ export const LoginPage = () => {
                 fontSize: '14px'
               }}
             >
-              © 2024 DMB SATU. All rights reserved.
+              {appVersion && `Version ${appVersion}`}
             </Typography>
           </Box>
         </Box>

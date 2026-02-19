@@ -11,7 +11,8 @@ import {
   ProductPage,
   AddProductPage,
   EditProductPage,
-  CreateTransactionPage
+  CreateTransactionPage,
+  DetailProductPage
 } from '@renderer/pages'
 
 export const appRoutes = [
@@ -95,6 +96,13 @@ export const appRoutes = [
   {
     path: '/product/edit/:id',
     element: <EditProductPage />,
+    active: true,
+    protected: true,
+    redirectTo: '/login'
+  },
+  {
+    path: '/product/detail/:id',
+    element: <DetailProductPage />,
     active: true,
     protected: true,
     redirectTo: '/login'

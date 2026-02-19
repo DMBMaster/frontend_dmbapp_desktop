@@ -47,6 +47,18 @@ const api = {
     return () => {
       ipcRenderer.removeListener('network-status-changed', handler)
     }
+  },
+
+  printThermalLan: async (data) => {
+    return await ipcRenderer.invoke('print-thermal-lan', data)
+  },
+
+  testThermalPrinter: async ({ printerIp, printerPort = 9100 }) => {
+    return await ipcRenderer.invoke('test-thermal-printer', { printerIp, printerPort })
+  },
+
+  getAppVersion: async () => {
+    return await ipcRenderer.invoke('get-app-version')
   }
 }
 

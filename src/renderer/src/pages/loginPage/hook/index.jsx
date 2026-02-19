@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNotifier } from '@renderer/components/core/NotificationProvider'
 import AuthService from '@renderer/services/authService'
 import { useNavigate } from 'react-router-dom'
@@ -12,6 +12,7 @@ export const useIndex = () => {
     username: '',
     password: ''
   })
+  const [appVersion, setAppVersion] = useState()
 
   const [errorFormLogin, setErrorFormLogin] = useState({})
 
@@ -114,11 +115,22 @@ export const useIndex = () => {
     }
   }
 
+  useEffect(() => {
+    const fetchVersion = async () => {
+      if (window.api && window.api.getAppVersion) {
+        const version = await window.api.getAppVersion()
+        setAppVersion(version)
+      }
+    }
+    fetchVersion()
+  }, [])
+
   return {
     formLogin,
     handleChange,
     loading,
     errorFormLogin,
-    handleLogin
+    handleLogin,
+    appVersion
   }
 }

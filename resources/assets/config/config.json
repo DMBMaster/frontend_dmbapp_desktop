@@ -3,6 +3,8 @@
   "API_URL_B": "https://merchant.api.dmbapp.com",
   "API_URL_NOTIF": "https://notif.api.dmbapp.com",
   "license": "4928935844",
+  "printer_ip": "192.168.1.100",
+  "printer_port": 9100,
   "auto_print_transaction": false,
   "refresh_time_trx": 15000
 }

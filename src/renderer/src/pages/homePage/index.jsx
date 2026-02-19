@@ -142,7 +142,7 @@ export const HomePage = () => {
               <MenuItem value="">Semua Outlet</MenuItem>
               {listOutlets.map((outlet) => (
                 <MenuItem key={outlet.id} value={String(outlet.id)}>
-                  {outlet.outlet && outlet.outlet.outlet_name}
+                  {outlet && outlet.name}
                 </MenuItem>
               ))}
             </TextField>

@@ -7,6 +7,8 @@ import path from 'path'
 import { readFileSync } from 'fs'
 import { net } from 'electron'
 import dns from 'dns'
+import ThermalPrinter from 'node-thermal-printer'
+const { printer: ThermalPrinterLib, types: PrinterTypes } = ThermalPrinter
 
 let mainWindow
 let networkCheckInterval = null
@@ -15,9 +17,11 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 900,
     height: 670,
+    minWidth: 900,
+    minHeight: 670,
     show: false,
     autoHideMenuBar: true,
-    fullscreen: true,
+    // fullscreen: true,
     frame: false,
     center: true,
     titleBarStyle: 'hidden',
@@ -31,7 +35,7 @@ function createWindow() {
 
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
-    mainWindow.setFullScreen(true)
+    // mainWindow.setFullScreen(true)
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
@@ -45,6 +49,10 @@ function createWindow() {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
 }
+
+ipcMain.handle('get-app-version', () => {
+  return app.getVersion()
+})
 
 ipcMain.handle('get-my-config', async () => {
   try {
@@ -117,6 +125,155 @@ ipcMain.on('print-order-receipt', (_, data) => {
       })
     }, 200)
   })
+})
+
+ipcMain.handle('print-thermal-lan', async (_, data) => {
+  try {
+    const { printerIp, printerPort = 9100, ...printData } = data
+
+    if (!printerIp) {
+      throw new Error('printerIp wajib diisi')
+    }
+
+    const printer = new ThermalPrinterLib({
+      type: PrinterTypes.EPSON, // ganti ke STAR jika pakai Star printer
+      interface: `tcp://${printerIp}:${printerPort}`,
+      timeout: 5000,
+      width: 32, // karakter per baris (32 untuk 58mm, 42 untuk 80mm)
+      characterSet: 'WPC1252',
+      removeSpecialCharacters: false,
+      lineCharacter: '-'
+    })
+
+    const isConnected = await printer.isPrinterConnected()
+    if (!isConnected) {
+      throw new Error(`Printer tidak dapat dijangkau di ${printerIp}:${printerPort}`)
+    }
+
+    // ---- Cetak Konten ----
+
+    // Header
+    printer.alignCenter()
+    if (printData.header1) {
+      printer.bold(true)
+      printer.setTextSize(1, 1)
+      printer.println(printData.header1)
+      printer.bold(false)
+    }
+    if (printData.header2) printer.println(printData.header2)
+    if (printData.header3) printer.println(printData.header3)
+
+    printer.drawLine()
+
+    // Info Order
+    printer.alignLeft()
+    if (printData.orderNumber) {
+      printer.tableCustom([
+        { text: 'No. Order', align: 'LEFT', width: 0.5 },
+        { text: `: ${printData.orderNumber}`, align: 'LEFT', width: 0.5 }
+      ])
+    }
+    if (printData.date) {
+      printer.tableCustom([
+        { text: 'Tanggal', align: 'LEFT', width: 0.5 },
+        { text: `: ${printData.date}`, align: 'LEFT', width: 0.5 }
+      ])
+    }
+    if (printData.cashierName) {
+      printer.tableCustom([
+        { text: 'Kasir', align: 'LEFT', width: 0.5 },
+        { text: `: ${printData.cashierName}`, align: 'LEFT', width: 0.5 }
+      ])
+    }
+
+    printer.drawLine()
+
+    // Items
+    if (printData.items && Array.isArray(printData.items)) {
+      for (const item of printData.items) {
+        printer.bold(true)
+        printer.println(item.name)
+        printer.bold(false)
+        printer.tableCustom([
+          { text: `  ${item.qty}x ${item.price}`, align: 'LEFT', width: 0.5 },
+          { text: item.subtotal, align: 'RIGHT', width: 0.5 }
+        ])
+      }
+    }
+
+    printer.drawLine()
+
+    // Totals
+    if (printData.subtotal) {
+      printer.tableCustom([
+        { text: 'Subtotal', align: 'LEFT', width: 0.5 },
+        { text: printData.subtotal, align: 'RIGHT', width: 0.5 }
+      ])
+    }
+    if (printData.tax) {
+      printer.tableCustom([
+        { text: 'Pajak', align: 'LEFT', width: 0.5 },
+        { text: printData.tax, align: 'RIGHT', width: 0.5 }
+      ])
+    }
+    if (printData.discount) {
+      printer.tableCustom([
+        { text: 'Diskon', align: 'LEFT', width: 0.5 },
+        { text: printData.discount, align: 'RIGHT', width: 0.5 }
+      ])
+    }
+    if (printData.total) {
+      printer.bold(true)
+      printer.tableCustom([
+        { text: 'TOTAL', align: 'LEFT', width: 0.5 },
+        { text: printData.total, align: 'RIGHT', width: 0.5 }
+      ])
+      printer.bold(false)
+    }
+    if (printData.cash) {
+      printer.tableCustom([
+        { text: 'Bayar', align: 'LEFT', width: 0.5 },
+        { text: printData.cash, align: 'RIGHT', width: 0.5 }
+      ])
+    }
+    if (printData.change) {
+      printer.tableCustom([
+        { text: 'Kembalian', align: 'LEFT', width: 0.5 },
+        { text: printData.change, align: 'RIGHT', width: 0.5 }
+      ])
+    }
+
+    printer.drawLine()
+
+    // Footer
+    printer.alignCenter()
+    if (printData.footer1) printer.println(printData.footer1)
+    if (printData.footer2) printer.println(printData.footer2)
+    if (printData.footer3) printer.println(printData.footer3)
+
+    printer.cut()
+
+    await printer.execute()
+    console.log('✅ Thermal print berhasil!')
+    return { success: true }
+  } catch (err) {
+    console.error('❌ Thermal print error:', err)
+    return { success: false, error: err.message }
+  }
+})
+
+ipcMain.handle('test-thermal-printer', async (_, { printerIp, printerPort = 9100 }) => {
+  try {
+    const printer = new ThermalPrinterLib({
+      type: PrinterTypes.EPSON,
+      interface: `tcp://${printerIp}:${printerPort}`,
+      timeout: 3000
+    })
+    const isConnected = await printer.isPrinterConnected()
+    return { connected: isConnected }
+  } catch (err) {
+    return { connected: false, error: err.message }
+  }
 })
 
 // ================================
@@ -227,6 +384,25 @@ ipcMain.handle('check-network-status', async () => {
   return isOnline
 })
 
+ipcMain.on('window-minimize', (event) => {
+  const window = BrowserWindow.fromWebContents(event.sender)
+  window?.minimize()
+})
+
+ipcMain.on('window-maximize', (event) => {
+  const window = BrowserWindow.fromWebContents(event.sender)
+  if (window?.isMaximized()) {
+    window.unmaximize()
+  } else {
+    window?.maximize()
+  }
+})
+
+ipcMain.on('window-close', (event) => {
+  const window = BrowserWindow.fromWebContents(event.sender)
+  window?.close()
+})
+
 app.whenReady().then(() => {
   electronApp.setAppUserModelId('com.electron')
 
@@ -262,22 +438,19 @@ if (is.dev) {
 
 // IPC handler untuk manual check updates
 ipcMain.on('check-for-updates', () => {
-  console.log('🔍 Checking for updates...')
-  autoUpdater
-    .checkForUpdates()
-    .then(() => {
-      console.log('✅ Update check initiated')
-    })
-    .catch((err) => {
-      console.error('❌ Update check failed:', err)
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send(
-          'update:notification',
-          'Gagal memeriksa pembaruan. Periksa koneksi internet Anda.',
-          'error'
-        )
-      }
-    })
+  // Cek apakah dalam mode development
+  if (is.dev) {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send(
+        'update:notification',
+        'Aplikasi dalam mode development. Auto-update hanya tersedia untuk versi production yang sudah di-package.',
+        'info'
+      )
+    }
+    return
+  }
+
+  autoUpdater.checkForUpdates()
 })
 
 // Event: Update tersedia
