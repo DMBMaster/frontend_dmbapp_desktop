@@ -99,17 +99,30 @@ export const ListEmployeePage = () => {
 
       <Stack direction="row" spacing={2} mb={3} justifyContent="space-between" alignItems="center">
         <Box />
-        {permissions.create && (
-          <Button
-            variant="contained"
-            startIcon={<IconPlus size={20} />}
-            disableElevation
-            color="primary"
-            onClick={() => setOpenDialog((prev) => ({ ...prev, addData: true }))}
-          >
-            Tambah Data
-          </Button>
-        )}
+        <Box display="flex" justifyContent="flex-end" mb={2}>
+          {permissions.create && (
+            <Button
+              variant="contained"
+              disableElevation
+              color="warning"
+              sx={{ mr: 2 }}
+              onClick={() => setOpenDialog((prev) => ({ ...prev, import: true }))}
+            >
+              Import
+            </Button>
+          )}
+          {permissions.create && (
+            <Button
+              variant="contained"
+              startIcon={<IconPlus size={20} />}
+              disableElevation
+              color="primary"
+              onClick={() => setOpenDialog((prev) => ({ ...prev, addData: true }))}
+            >
+              Tambah Data
+            </Button>
+          )}
+        </Box>
       </Stack>
 
       <Grid size={{ xs: 12 }}>

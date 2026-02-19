@@ -13,6 +13,8 @@ import { EditProductPage } from './productsPage/edit'
 import { CreateTransactionPage } from './transactionPage/create'
 import { DetailProductPage } from './productsPage/detail'
 import { ListEmployeePage } from './employeePage/list'
+import { ShiftEmployeePage } from './employeePage/shift'
+import { CalenderShiftEmployeePage } from './employeePage/shift/calender'
 
 export {
   HomePage,
@@ -29,5 +31,7 @@ export {
   EditProductPage,
   DetailProductPage,
   CreateTransactionPage,
-  ListEmployeePage
+  ListEmployeePage,
+  ShiftEmployeePage,
+  CalenderShiftEmployeePage
 }

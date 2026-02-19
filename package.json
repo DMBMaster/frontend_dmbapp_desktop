@@ -34,6 +34,7 @@
     "@uidotdev/usehooks": "^2.4.1",
     "apexcharts": "^5.3.6",
     "axios": "^1.13.2",
+    "date-fns": "^4.1.0",
     "dayjs": "^1.11.19",
     "dexie": "^4.3.0",
     "electron-updater": "^6.3.9",

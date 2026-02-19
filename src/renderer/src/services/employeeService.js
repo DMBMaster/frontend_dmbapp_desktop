@@ -108,9 +108,39 @@ const EmployeeService = () => {
     }
   }
 
+  const createShift = async (data) => {
+    try {
+      const res = await axiosInstance.post(`/attendance/shift`, data)
+      return res.data
+    } catch (error) {
+      console.error(error)
+      throw error
+    }
+  }
+
   const getShift = async (params) => {
     try {
       const res = await axiosInstance.get(`/attendance/shift`, { params })
+      return res.data
+    } catch (error) {
+      console.error(error)
+      throw error
+    }
+  }
+
+  const getShiftEmployee = async (params) => {
+    try {
+      const res = await axiosInstance.get(`/attendance/employee-shift-v2`, { params })
+      return res.data
+    } catch (error) {
+      console.error(error)
+      throw error
+    }
+  }
+
+  const deleteShift = async (id) => {
+    try {
+      const res = await axiosInstance.delete(`/attendance/shift/${id}`)
       return res.data
     } catch (error) {
       console.error(error)
@@ -162,7 +192,10 @@ const EmployeeService = () => {
     getShift,
     checkEmailUser,
     assignShift,
-    createEmployee
+    createEmployee,
+    createShift,
+    deleteShift,
+    getShiftEmployee
   }
 }
 

@@ -13,7 +13,9 @@ import {
   EditProductPage,
   CreateTransactionPage,
   DetailProductPage,
-  ListEmployeePage
+  ListEmployeePage,
+  ShiftEmployeePage,
+  CalenderShiftEmployeePage
 } from '@renderer/pages'
 
 export const appRoutes = [
@@ -112,6 +114,20 @@ export const appRoutes = [
   {
     path: '/employee/list',
     element: <ListEmployeePage />,
+    active: true,
+    protected: true,
+    redirectTo: '/login'
+  },
+  {
+    path: '/employee/shift',
+    element: <ShiftEmployeePage />,
+    active: true,
+    protected: true,
+    redirectTo: '/login'
+  },
+  {
+    path: '/employee/shift/calendar',
+    element: <CalenderShiftEmployeePage />,
     active: true,
     protected: true,
     redirectTo: '/login'
