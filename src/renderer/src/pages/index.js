@@ -12,6 +12,7 @@ import { InstoreTransactionPage } from './transactionPage/instore'
 import { EditProductPage } from './productsPage/edit'
 import { CreateTransactionPage } from './transactionPage/create'
 import { DetailProductPage } from './productsPage/detail'
+import { ListEmployeePage } from './employeePage/list'
 
 export {
   HomePage,
@@ -27,5 +28,6 @@ export {
   AddProductPage,
   EditProductPage,
   DetailProductPage,
-  CreateTransactionPage
+  CreateTransactionPage,
+  ListEmployeePage
 }

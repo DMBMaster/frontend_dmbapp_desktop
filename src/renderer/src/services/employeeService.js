@@ -2,36 +2,24 @@ import { useAxiosInstance } from '@renderer/api/axiosInstance'
 import { localdb } from '@renderer/config/localdb'
 import { useNetworkStore } from '@renderer/store/networkStore'
 
-// ================================
-// HELPER: Check if online from Zustand store
-// ================================
 const isOnline = () => useNetworkStore.getState().isOnline
 
-// ================================
-// SERVICE IMPLEMENTATION
-// ================================
 const EmployeeService = () => {
   const axiosInstance = useAxiosInstance()
   const getOutletGuid = () => localStorage.getItem('outletGuid')
 
-  // ============================
-  // GET EMPLOYEES LIST
-  // ============================
   const getEmployees = async (params) => {
     const outletGuid = getOutletGuid()
 
-    // Check network status FIRST - skip API call if offline
     if (!isOnline()) {
       console.log('📴 Offline detected → Loading employees from cache directly')
       return getEmployeesFromCache(outletGuid)
     }
 
     try {
-      // ===== ONLINE - TRY API =====
       const res = await axiosInstance.get('/product-service/employee', { params })
       const responseData = res.data
 
-      // Cache ke Dexie (replace existing cache for this outlet)
       if (Array.isArray(responseData?.data)) {
         await localdb.employees.where({ outlet_guid: outletGuid }).delete()
         await localdb.employees.bulkAdd(
@@ -46,15 +34,100 @@ const EmployeeService = () => {
 
       return responseData
     } catch (error) {
-      // API call failed - try cache
       console.warn('⚠️ API failed → Loading employees from cache')
-      // Mark as offline since API failed
-      // useNetworkStore.getState().setOffline()
+
       return getEmployeesFromCache(outletGuid, error)
     }
   }
 
-  // Helper: Get employees from cache
+  const changeOutletEmploye = async (data) => {
+    try {
+      const res = await axiosInstance.put(`/product-service/employee/change-outlet`, data)
+      return res.data
+    } catch (error) {
+      console.error(error)
+      throw error
+    }
+  }
+
+  const forgotPassword = async (data) => {
+    try {
+      const res = await axiosInstance.post(`/user-service/forgot`, data)
+      return res.data
+    } catch (error) {
+      console.error(error)
+      throw error
+    }
+  }
+
+  const resetPin = async (data) => {
+    try {
+      const res = await axiosInstance.post(`/user-service/reset-pin`, data)
+      return res.data
+    } catch (error) {
+      console.error(error)
+      throw error
+    }
+  }
+
+  const importEmployee = async (data) => {
+    try {
+      const res = await axiosInstance.post(`/product-service/employee/import`, data, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      })
+      return res.data
+    } catch (error) {
+      console.error(error)
+      throw error
+    }
+  }
+
+  const createEmployee = async (data) => {
+    try {
+      const res = await axiosInstance.post(`/product-service/employee`, data, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      })
+      return res.data
+    } catch (error) {
+      console.error(error)
+      throw error
+    }
+  }
+
+  const assignShift = async (data) => {
+    try {
+      const res = await axiosInstance.post(`/attendance/employee-shift`, data)
+      return res.data
+    } catch (error) {
+      console.error(error)
+      throw error
+    }
+  }
+
+  const getShift = async (params) => {
+    try {
+      const res = await axiosInstance.get(`/attendance/shift`, { params })
+      return res.data
+    } catch (error) {
+      console.error(error)
+      throw error
+    }
+  }
+
+  const checkEmailUser = async (email) => {
+    try {
+      const res = await axiosInstance.get(`/user-service/user-by?email=${email}`)
+      return res.data
+    } catch (error) {
+      console.error(error)
+      throw error
+    }
+  }
+
   const getEmployeesFromCache = async (outletGuid, originalError) => {
     const cached = await localdb.employees.where({ outlet_guid: outletGuid }).toArray()
 
@@ -81,7 +154,15 @@ const EmployeeService = () => {
   }
 
   return {
-    getEmployees
+    getEmployees,
+    changeOutletEmploye,
+    forgotPassword,
+    resetPin,
+    importEmployee,
+    getShift,
+    checkEmailUser,
+    assignShift,
+    createEmployee
   }
 }
 

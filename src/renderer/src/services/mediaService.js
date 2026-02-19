@@ -32,8 +32,30 @@ const MediaService = () => {
       filename: file.name
     }
   }
+  const uploadAttendanceUser = async (formData) => {
+    if (!isOnline()) {
+      return {
+        status: 'error',
+        status_code: 503,
+        message: 'Upload receipt tidak tersedia saat offline.',
+        error: 'offline',
+        data: null,
+        offline: true
+      }
+    }
+    const response = await axiosInstance.post('/media-service/upload/attendance-user', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+
+    return {
+      url: response.data.data.download.actual
+    }
+  }
   return {
-    uploadReceipt
+    uploadReceipt,
+    uploadAttendanceUser
   }
 }
 

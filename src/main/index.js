@@ -428,7 +428,13 @@ app.whenReady().then(() => {
 
 // Konfigurasi auto update
 autoUpdater.autoDownload = false
-
+autoUpdater.setFeedURL({
+  provider: 'github',
+  owner: 'DMBMaster',
+  repo: 'frontend_dmbapp_desktop',
+  private: true,
+  token: process.env.GH_TOKEN
+})
 // Allow dev mode untuk testing auto updater
 if (is.dev) {
   autoUpdater.forceDevUpdateConfig = true
