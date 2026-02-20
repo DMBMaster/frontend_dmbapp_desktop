@@ -10,10 +10,12 @@ export const usePermissions = (userRole) => {
       read: false,
       create: false,
       update: false,
-      delete: false
+      delete: false,
+      purchasing: false
     }
 
     const modules = userRole?.data?.[0]?.role?.modules
+    const purchase = userRole?.data?.[0]?.role?.id || 0
     if (!modules) return defaultPermission
 
     const hasPermission = (actionName) => {
@@ -38,7 +40,8 @@ export const usePermissions = (userRole) => {
       read: hasPermission('read'),
       create: hasPermission('create'),
       update: hasPermission('update'),
-      delete: hasPermission('delete')
+      delete: hasPermission('delete'),
+      purchasing: purchase === 3 || purchase === 31
     }
   }, [userRole, currentPath])
 }

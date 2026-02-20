@@ -38,7 +38,8 @@ export const UseSchedule = () => {
     handleSubmitImportEmployee: false,
     fetchShifts: false,
     handleConfirmShift: false,
-    addData: false
+    addData: false,
+    importData: false
   })
 
   const [pageParams, setPageParams] = useState({
@@ -231,7 +232,7 @@ export const UseSchedule = () => {
   }
   const handleSubmitImport = async (e) => {
     e.preventDefault()
-    setLoading(true)
+    setLoading((prev) => ({ ...prev, importData: true }))
 
     try {
       const response = await employeeService.importScheduleEmployee(attachmentUrl)
@@ -276,7 +277,7 @@ export const UseSchedule = () => {
 
       setImportSchedule({ file: '' })
     } finally {
-      setLoading(false)
+      setLoading((prev) => ({ ...prev, importData: false }))
     }
   }
 

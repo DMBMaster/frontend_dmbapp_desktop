@@ -15,6 +15,7 @@ import { Sidebar } from './components/core/sidebar'
 import { useConfigStore } from './store/configProvider'
 import SidebarService from './services/sidebarService'
 import { ThemeSettings } from './utils/theme/Theme'
+import { NotFoundPage } from './pages'
 
 const getToken = () => localStorage.getItem('token')
 
@@ -30,7 +31,7 @@ const LoginOnlyLayout = ({ children }) => {
       if (key === 'F5') e.preventDefault()
       if (key === 'f' && altKey) e.preventDefault()
       if (key === 'F11') e.preventDefault()
-      if (key === 'r' && ctrlKey) {
+      if ((key === 'r' || key === 'R') && ctrlKey) {
         e.preventDefault()
         window.location.reload()
       }
@@ -160,29 +161,12 @@ const App = () => {
         <Router>
           <Routes>
             {appRoutes.filter((r) => r.active).map((route, i) => renderRoute(route, i))}
-
             {/* 404 */}
             <Route
               path="*"
               element={
                 <SidebarLayout>
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      height: '100%'
-                    }}
-                  >
-                    <Box sx={{ textAlign: 'center' }}>
-                      <Box component="h1" sx={{ fontSize: '3rem', fontWeight: 700, mb: 1 }}>
-                        404
-                      </Box>
-                      <Box component="p" sx={{ color: 'text.secondary' }}>
-                        Page Not Found
-                      </Box>
-                    </Box>
-                  </Box>
+                  <NotFoundPage />
                 </SidebarLayout>
               }
             />

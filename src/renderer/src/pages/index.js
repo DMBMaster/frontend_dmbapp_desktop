@@ -16,6 +16,10 @@ import { ListEmployeePage } from './employeePage/list'
 import { ShiftEmployeePage } from './employeePage/shift'
 import { CalenderShiftEmployeePage } from './employeePage/shift/calender'
 import { ScheduleEmployeePage } from './employeePage/schedule'
+import { PurchaseRequestPage } from './inventoryPage/purchase/request'
+import { NotFoundPage } from './notFoundPage'
+import { CreatePurchaseRequestPage } from './inventoryPage/purchase/request/create'
+import { UpdatePurchaseRequestPage } from './inventoryPage/purchase/request/edit'
 
 export {
   HomePage,
@@ -35,5 +39,9 @@ export {
   ListEmployeePage,
   ShiftEmployeePage,
   CalenderShiftEmployeePage,
-  ScheduleEmployeePage
+  ScheduleEmployeePage,
+  PurchaseRequestPage,
+  CreatePurchaseRequestPage,
+  UpdatePurchaseRequestPage,
+  NotFoundPage
 }

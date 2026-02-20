@@ -298,9 +298,9 @@ export const ScheduleEmployeePage = () => {
             variant="contained"
             color="primary"
             type="submit"
-            disabled={loading || !importSchedule.file}
+            disabled={loading.importData || !importSchedule.file}
           >
-            {loading ? 'Import...' : 'Import'}
+            {loading.importData ? 'Import...' : 'Import'}
           </Button>
         </DialogActions>
       </Dialog>

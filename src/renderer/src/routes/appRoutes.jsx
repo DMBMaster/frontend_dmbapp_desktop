@@ -16,7 +16,10 @@ import {
   ListEmployeePage,
   ShiftEmployeePage,
   CalenderShiftEmployeePage,
-  ScheduleEmployeePage
+  ScheduleEmployeePage,
+  PurchaseRequestPage,
+  CreatePurchaseRequestPage,
+  UpdatePurchaseRequestPage
 } from '@renderer/pages'
 
 export const appRoutes = [
@@ -25,6 +28,8 @@ export const appRoutes = [
   { path: '/xyz/info', element: <InfoAppPage />, active: true, protected: false },
 
   // =============== PROTECTED ROUTES ===============
+
+  // #region - DASHBOARD
   {
     path: '/',
     element: <HomePage />,
@@ -40,6 +45,9 @@ export const appRoutes = [
     protected: true,
     redirectTo: '/login'
   },
+  // #endregion
+
+  //#region - EXPENSES
   {
     path: '/expenses',
     element: <ExpensesPage />,
@@ -54,6 +62,9 @@ export const appRoutes = [
     protected: true,
     redirectTo: '/login'
   },
+  // #endregion
+
+  // #region - TRANSACTIONS
   {
     path: '/transaction/history',
     element: <HistoryTransactionPage />,
@@ -82,7 +93,9 @@ export const appRoutes = [
     protected: true,
     redirectTo: '/login'
   },
+  // #endregion
 
+  // #region - PRODUCTS
   {
     path: '/product/list',
     element: <ProductPage />,
@@ -111,7 +124,9 @@ export const appRoutes = [
     protected: true,
     redirectTo: '/login'
   },
+  // #endregion
 
+  // #region - EMPLOYEES
   {
     path: '/employee/list',
     element: <ListEmployeePage />,
@@ -139,7 +154,31 @@ export const appRoutes = [
     active: true,
     protected: true,
     redirectTo: '/login'
-  }
+  },
+  // #endregion
 
+  // #region - INVENTORY
+  {
+    path: '/inventory/purchase/request',
+    element: <PurchaseRequestPage />,
+    active: true,
+    protected: true,
+    redirectTo: '/login'
+  },
+  {
+    path: '/inventory/purchase/request/create',
+    element: <CreatePurchaseRequestPage />,
+    active: true,
+    protected: true,
+    redirectTo: '/login'
+  },
+  {
+    path: '/inventory/purchase/request/edit/:id',
+    element: <UpdatePurchaseRequestPage />,
+    active: true,
+    protected: true,
+    redirectTo: '/login'
+  }
+  // #endregion
   // { path: '*', element: <NotFoundPage />, active: true, protected: false }
 ]
