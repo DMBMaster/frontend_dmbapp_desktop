@@ -15,6 +15,7 @@ import { DetailProductPage } from './productsPage/detail'
 import { ListEmployeePage } from './employeePage/list'
 import { ShiftEmployeePage } from './employeePage/shift'
 import { CalenderShiftEmployeePage } from './employeePage/shift/calender'
+import { ScheduleEmployeePage } from './employeePage/schedule'
 
 export {
   HomePage,
@@ -33,5 +34,6 @@ export {
   CreateTransactionPage,
   ListEmployeePage,
   ShiftEmployeePage,
-  CalenderShiftEmployeePage
+  CalenderShiftEmployeePage,
+  ScheduleEmployeePage
 }

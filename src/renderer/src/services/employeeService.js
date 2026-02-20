@@ -158,6 +158,49 @@ const EmployeeService = () => {
     }
   }
 
+  const getScheduleEmployee = async (params) => {
+    try {
+      const res = await axiosInstance.get(`/attendance/employee-schedule`, { params })
+      return res.data
+    } catch (error) {
+      console.error(error)
+      throw error
+    }
+  }
+
+  const deleteScheduleEmployee = async (id) => {
+    try {
+      const res = await axiosInstance.delete(`/attendance/employee-schedule/${id}`)
+      return res.data
+    } catch (error) {
+      console.error(error)
+      throw error
+    }
+  }
+
+  const createScheduleEmployee = async (data) => {
+    try {
+      const res = await axiosInstance.post(`/attendance/employee-schedule`, data)
+      return res.data
+    } catch (error) {
+      console.error(error)
+      throw error
+    }
+  }
+  const importScheduleEmployee = async (data) => {
+    try {
+      const res = await axiosInstance.post(`/attendance/employee-schedule/import`, data, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      })
+      return res.data
+    } catch (error) {
+      console.error(error)
+      throw error
+    }
+  }
+
   const getEmployeesFromCache = async (outletGuid, originalError) => {
     const cached = await localdb.employees.where({ outlet_guid: outletGuid }).toArray()
 
@@ -195,7 +238,11 @@ const EmployeeService = () => {
     createEmployee,
     createShift,
     deleteShift,
-    getShiftEmployee
+    getShiftEmployee,
+    getScheduleEmployee,
+    deleteScheduleEmployee,
+    createScheduleEmployee,
+    importScheduleEmployee
   }
 }
 
