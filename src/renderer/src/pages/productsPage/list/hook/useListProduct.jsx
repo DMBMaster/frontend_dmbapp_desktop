@@ -21,9 +21,10 @@ import {
   Tooltip,
   Typography
 } from '@mui/material'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { IconEdit, IconEye, IconTrash } from '@tabler/icons-react'
 import { formatRupiah, getImgUrl } from '@renderer/utils/myFunctions'
+import { usePermissions } from '@renderer/store/usePermission'
 
 const columnHelper = createColumnHelper()
 
@@ -33,12 +34,7 @@ export const UseListProduct = () => {
   const productService = ProductService()
 
   const [data, setData] = useState([])
-  const [permissions, setPermissions] = useState({
-    read: true,
-    create: true,
-    update: true,
-    delete: true
-  })
+  const permissions = usePermissions(userRole)
   const [openDialog, setOpenDialog] = useState({ delete: false })
   const [selectedDeleteId, setSelectedDeleteId] = useState(null)
   const [sorting, setSorting] = useState([])
@@ -60,39 +56,6 @@ export const UseListProduct = () => {
     searchTerm: ''
   })
   const debouncedSearch = useDebounce(pageParams.searchTerm, 500)
-
-  const location = useLocation()
-  const currentPath = location.pathname
-  const handlePermissions = () => {
-    if (
-      userRole &&
-      userRole.data &&
-      userRole.data.length > 0 &&
-      userRole.data[0].role &&
-      userRole.data[0].role.modules
-    ) {
-      const modules = userRole.data[0].role.modules
-      const hasPermission = (modules, actionName) =>
-        modules.some(
-          (module) =>
-            (module.action?.some((action) => action.name === actionName) &&
-              module.link === currentPath &&
-              module.action_module.includes(actionName)) ||
-            module.childs?.some(
-              (child) =>
-                child.action?.some((action) => action.name === actionName) &&
-                child.link === currentPath &&
-                child.action_module.includes(actionName)
-            )
-        )
-
-      const hasRead = hasPermission(modules, 'read')
-      const hasCreate = hasPermission(modules, 'create')
-      const hasDelete = hasPermission(modules, 'delete')
-      const hasUpdate = hasPermission(modules, 'update')
-      setPermissions({ read: hasRead, create: hasCreate, delete: hasDelete, update: hasUpdate })
-    }
-  }
 
   const fetchData = useCallback(async () => {
     setLoading((prev) => ({ ...prev, fetchData: true }))
@@ -368,7 +331,6 @@ export const UseListProduct = () => {
 
   useEffect(() => {
     fetchData()
-    handlePermissions()
   }, [pageParams.page, pageParams.pageSize, debouncedSearch])
 
   return {

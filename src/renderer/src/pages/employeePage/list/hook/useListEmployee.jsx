@@ -3,7 +3,6 @@ import EmployeeService from '@renderer/services/employeeService'
 import { selectedOutlet, userRole } from '@renderer/utils/config'
 import { useDebounce } from '@uidotdev/usehooks'
 import { useCallback, useEffect, useState } from 'react'
-import { useLocation } from 'react-router-dom'
 import {
   createColumnHelper,
   getCoreRowModel,
@@ -25,6 +24,7 @@ import {
 import { getImgUrl } from '@renderer/utils/myFunctions'
 import { IconCalendar, IconEdit, IconPassword, IconSend2 } from '@tabler/icons-react'
 import MediaService from '@renderer/services/mediaService'
+import { usePermissions } from '@renderer/store/usePermission'
 const columnHelper = createColumnHelper()
 
 export const UseListEmployee = () => {
@@ -33,12 +33,7 @@ export const UseListEmployee = () => {
   const mediaService = MediaService()
 
   const [data, setData] = useState([])
-  const [permissions, setPermissions] = useState({
-    read: true,
-    create: true,
-    update: true,
-    delete: true
-  })
+  const permissions = usePermissions(userRole)
   const [openDialog, setOpenDialog] = useState({
     delete: false,
     import: false,
@@ -88,39 +83,6 @@ export const UseListEmployee = () => {
     position: '',
     file: null
   })
-
-  const location = useLocation()
-  const currentPath = location.pathname
-  const handlePermissions = () => {
-    if (
-      userRole &&
-      userRole.data &&
-      userRole.data.length > 0 &&
-      userRole.data[0].role &&
-      userRole.data[0].role.modules
-    ) {
-      const modules = userRole.data[0].role.modules
-      const hasPermission = (modules, actionName) =>
-        modules.some(
-          (module) =>
-            (module.action?.some((action) => action.name === actionName) &&
-              module.link === currentPath &&
-              module.action_module.includes(actionName)) ||
-            module.childs?.some(
-              (child) =>
-                child.action?.some((action) => action.name === actionName) &&
-                child.link === currentPath &&
-                child.action_module.includes(actionName)
-            )
-        )
-
-      const hasRead = hasPermission(modules, 'read')
-      const hasCreate = hasPermission(modules, 'create')
-      const hasDelete = hasPermission(modules, 'delete')
-      const hasUpdate = hasPermission(modules, 'update')
-      setPermissions({ read: hasRead, create: hasCreate, delete: hasDelete, update: hasUpdate })
-    }
-  }
 
   const fetchShifts = async () => {
     setLoading((prev) => ({ ...prev, fetchShifts: true }))
@@ -659,7 +621,6 @@ export const UseListEmployee = () => {
 
   useEffect(() => {
     fetchData()
-    handlePermissions()
   }, [pageParams.page, pageParams.pageSize, debouncedSearch])
 
   return {
@@ -673,7 +634,6 @@ export const UseListEmployee = () => {
     loading,
     fetchData,
     handleDelete,
-    handlePermissions,
     openPreview,
     setOpenPreview,
     previewImageUrl,

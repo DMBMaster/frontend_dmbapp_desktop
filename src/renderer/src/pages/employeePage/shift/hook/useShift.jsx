@@ -10,9 +10,9 @@ import {
 import { useDebounce } from '@uidotdev/usehooks'
 import { useCallback, useEffect, useState } from 'react'
 import { Box, Chip, IconButton, Tooltip, Typography } from '@mui/material'
-import { useLocation } from 'react-router-dom'
 import { IconTrash } from '@tabler/icons-react'
 import EmployeeService from '@renderer/services/employeeService'
+import { usePermissions } from '@renderer/store/usePermission'
 
 const columnHelper = createColumnHelper()
 
@@ -21,12 +21,7 @@ export const UseShift = () => {
   const employeeService = EmployeeService()
 
   const [data, setData] = useState([])
-  const [permissions, setPermissions] = useState({
-    read: true,
-    create: true,
-    update: true,
-    delete: true
-  })
+  const permissions = usePermissions(userRole)
   const [openDialog, setOpenDialog] = useState({ delete: false })
   const [selectedRow, setSelectedRow] = useState(null)
   const [sorting, setSorting] = useState([])
@@ -109,39 +104,6 @@ export const UseShift = () => {
     } finally {
       setOpenDialog((prev) => ({ ...prev, addData: false }))
       setLoading((prev) => ({ ...prev, addData: false }))
-    }
-  }
-
-  const location = useLocation()
-  const currentPath = location.pathname
-  const handlePermissions = () => {
-    if (
-      userRole &&
-      userRole.data &&
-      userRole.data.length > 0 &&
-      userRole.data[0].role &&
-      userRole.data[0].role.modules
-    ) {
-      const modules = userRole.data[0].role.modules
-      const hasPermission = (modules, actionName) =>
-        modules.some(
-          (module) =>
-            (module.action?.some((action) => action.name === actionName) &&
-              module.link === currentPath &&
-              module.action_module.includes(actionName)) ||
-            module.childs?.some(
-              (child) =>
-                child.action?.some((action) => action.name === actionName) &&
-                child.link === currentPath &&
-                child.action_module.includes(actionName)
-            )
-        )
-
-      const hasRead = hasPermission(modules, 'read')
-      const hasCreate = hasPermission(modules, 'create')
-      const hasDelete = hasPermission(modules, 'delete')
-      const hasUpdate = hasPermission(modules, 'update')
-      setPermissions({ read: hasRead, create: hasCreate, delete: hasDelete, update: hasUpdate })
     }
   }
 
@@ -296,7 +258,6 @@ export const UseShift = () => {
 
   useEffect(() => {
     fetchData()
-    handlePermissions()
   }, [pageParams.page, pageParams.pageSize, debouncedSearch])
 
   return {
