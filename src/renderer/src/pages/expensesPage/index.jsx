@@ -64,6 +64,7 @@ import { useNavigate } from 'react-router-dom'
 import { formatDate, formatDateTime, formatRupiah, getImgUrl } from '@renderer/utils/myFunctions'
 import Breadcrumb from '@renderer/components/ui/breadcrumb/Breadcrumb'
 import { listOutlets } from '@renderer/utils/config'
+import { PictureAsPdf } from '@mui/icons-material'
 const BCrumb = [
   {
     to: '/',
@@ -314,36 +315,68 @@ export const ExpensesPage = () => {
         )
       }),
       columnHelper.accessor('receipt', {
-        enableSorting: false,
-        header: () => (
-          <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-            Bukti
-          </Typography>
-        ),
+        enableSorting: true,
+        header: 'Bukti',
         cell: (info) => {
-          const receipt = info.getValue()
-          if (!receipt) return <Typography variant="body2">-</Typography>
+          const productName = info.getValue()
 
-          const imageUrl = `${getImgUrl(receipt)}`
+          // Jika tidak ada foto, tampilkan teks
+          if (!productName) {
+            return (
+              <Typography variant="body2" color="text.secondary">
+                Tidak ada bukti
+              </Typography>
+            )
+          }
+
+          // Normalize path (remove '/file/' segment) and detect type
+          const productPath = productName ? productName.replace('/file/', '/') : productName
+          const fullUrl = `${getImgUrl(productPath)}`
+          const isImage = /\.(jpe?g|png|gif|webp|bmp|svg)(\?.*)?$/i.test(productPath || '')
 
           const handleImageClick = () => {
-            setPreviewImageUrl(imageUrl)
+            setPreviewImageUrl(fullUrl)
             setOpenPreview(true)
           }
 
+          if (isImage) {
+            return (
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <img
+                  src={fullUrl}
+                  alt={productName}
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    marginRight: '8px',
+                    cursor: 'pointer'
+                  }}
+                  onClick={handleImageClick}
+                />
+                <Dialog open={openPreview} onClose={() => setOpenPreview(false)}>
+                  <DialogContent>
+                    <img
+                      src={previewImageUrl}
+                      alt="Preview"
+                      style={{ width: '100%', height: 'auto' }}
+                    />
+                  </DialogContent>
+                  <DialogActions>
+                    <Button onClick={() => setOpenPreview(false)} color="primary">
+                      Close
+                    </Button>
+                  </DialogActions>
+                </Dialog>
+              </div>
+            )
+          }
+
           return (
-            <img
-              src={imageUrl}
-              alt="Receipt"
-              style={{
-                width: '40px',
-                height: '40px',
-                cursor: 'pointer',
-                objectFit: 'cover',
-                borderRadius: '4px'
-              }}
-              onClick={handleImageClick}
-            />
+            <Box display="flex" alignItems="center" gap={1}>
+              <a href={fullUrl} target="_blank" rel="noopener noreferrer">
+                <PictureAsPdf fontSize="small" />
+              </a>
+            </Box>
           )
         }
       }),

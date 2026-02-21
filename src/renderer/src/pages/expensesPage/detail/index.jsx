@@ -1,4 +1,4 @@
-import { Cancel, Close } from '@mui/icons-material'
+import { Cancel, Close, PictureAsPdf } from '@mui/icons-material'
 import {
   Alert,
   Avatar,
@@ -56,7 +56,12 @@ export const DetailExpensesPage = () => {
     snackbarErrorOpen,
     setSnackbarErrorOpen,
     snackbarErrorMessage,
-    loading
+    loading,
+    handleReceiptFileChange,
+    getNormalizedReceipt,
+    isImageReceipt,
+    handleReceiptUpload,
+    newReceiptFile
   } = UseIndex()
 
   if (loading.fetchDetail) {
@@ -313,48 +318,95 @@ export const DetailExpensesPage = () => {
                       Bukti Pembayaran
                     </Typography>
                     {detailData?.receipt && detailData?.receipt !== '-' ? (
-                      <Card
-                        sx={{
-                          maxWidth: 300,
-                          cursor: 'pointer',
-                          position: 'relative',
-                          '&:hover': {
-                            boxShadow: 3
-                          },
-                          '&:hover .zoom-overlay': {
-                            opacity: 1
-                          }
-                        }}
-                        onClick={() => handleImageClick(getImgUrl(detailData?.receipt))}
-                      >
-                        <CardMedia
-                          component="img"
-                          height={200}
-                          image={getImgUrl(detailData?.receipt)}
-                          alt="Bukti pembayaran"
-                          sx={{ objectFit: 'cover' }}
-                        />
-                        <Box
-                          className="zoom-overlay"
-                          sx={{
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
-                            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            opacity: 0,
-                            transition: 'opacity 0.3s ease'
-                          }}
-                        >
-                          <ZoomIn color="white" size={40} />
-                        </Box>
-                      </Card>
+                      (() => {
+                        const normalized = getNormalizedReceipt()
+                        if (isImageReceipt()) {
+                          return (
+                            <Card
+                              sx={{
+                                maxWidth: 300,
+                                cursor: 'pointer',
+                                position: 'relative',
+                                '&:hover': {
+                                  boxShadow: 3
+                                },
+                                '&:hover .zoom-overlay': {
+                                  opacity: 1
+                                }
+                              }}
+                              onClick={() => handleImageClick(getImgUrl(normalized))}
+                            >
+                              <CardMedia
+                                component="img"
+                                height={200}
+                                image={getImgUrl(normalized)}
+                                alt="Bukti pembayaran"
+                                sx={{ objectFit: 'cover' }}
+                              />
+                              <Box
+                                className="zoom-overlay"
+                                sx={{
+                                  position: 'absolute',
+                                  top: 0,
+                                  left: 0,
+                                  right: 0,
+                                  bottom: 0,
+                                  backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  opacity: 0,
+                                  transition: 'opacity 0.3s ease'
+                                }}
+                              >
+                                <ZoomIn sx={{ color: 'white', fontSize: 40 }} />
+                              </Box>
+                            </Card>
+                          )
+                        }
+
+                        // Non-image file: show download / open button with icon and filename
+                        const filename = normalized ? normalized.split('/').pop() : 'file'
+                        return (
+                          <Box display="flex" flexDirection="column" gap={1}>
+                            <Button
+                              variant="outlined"
+                              startIcon={<PictureAsPdf />}
+                              href={getImgUrl(normalized)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              {filename}
+                            </Button>
+                          </Box>
+                        )
+                      })()
                     ) : (
-                      <Typography variant="body2">Tidak ada bukti</Typography>
+                      <Box display="flex" flexDirection="column" gap={1}>
+                        <Typography variant="body2">Tidak ada bukti</Typography>
+                        <TextField
+                          onChange={handleReceiptFileChange}
+                          type="file"
+                          id="detail-receipt-upload"
+                          fullWidth
+                          size="small"
+                          accept="image/*"
+                          variant="outlined"
+                        />
+                        <Box display="flex" gap={1} alignItems="center">
+                          <Button
+                            variant="contained"
+                            color="primary"
+                            onClick={handleReceiptUpload}
+                            disabled={!newReceiptFile || loading.uploading}
+                          >
+                            {loading.uploading ? 'Uploading...' : 'Upload Bukti'}
+                          </Button>
+                          {newReceiptFile && (
+                            <Typography variant="body2">{newReceiptFile.name}</Typography>
+                          )}
+                        </Box>
+                      </Box>
                     )}
                   </Grid>
                 </Grid>

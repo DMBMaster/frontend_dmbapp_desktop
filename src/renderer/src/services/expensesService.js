@@ -191,7 +191,7 @@ const ExpensesService = () => {
   // ============================
   const updateExpenses = async (guid, payload) => {
     try {
-      const res = await axiosInstance.put(`/expenses/${guid}`, payload)
+      const res = await axiosInstance.patch(`/expenses/${guid}`, payload)
 
       // Update cache if exists
       const cached = await localdb.expenseDetails.get(guid)
