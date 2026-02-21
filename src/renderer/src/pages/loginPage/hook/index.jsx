@@ -97,7 +97,7 @@ export const useIndex = () => {
       } else {
         notifier.show({
           message: 'Login Gagal',
-          description: 'Username atau password yang Anda masukkan salah.',
+          description: response.message || 'Terjadi kesalahan saat login. Silakan coba lagi.',
           severity: 'error'
         })
       }

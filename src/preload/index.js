@@ -2,6 +2,13 @@ import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 
 const api = {
+  device: {
+    deviceName: async () => await ipcRenderer.invoke('get-device-label'),
+    deviceUuid: async () => await ipcRenderer.invoke('get-device-uuid'),
+    deviceBrand: async () => await ipcRenderer.invoke('get-device-brand'),
+    deviceInfo: async () => await ipcRenderer.invoke('get-device-info')
+  },
+
   getMyConfig: async () => {
     return await ipcRenderer.invoke('get-my-config')
   },

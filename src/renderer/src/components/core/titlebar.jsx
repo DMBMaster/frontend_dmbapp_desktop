@@ -55,10 +55,28 @@ export const TitleBar = ({ username, theme = 'light', onLogout, showUpdateButton
     user?.outlets.find((o) => String(o.id) === savedOutletId) || user?.outlets[0] || null
 
   const [currentOutlet, setCurrentOutlet] = useState(initialOutlet)
+  const [deviceId, setDeviceId] = useState('')
+  const [deviceName, setDeviceName] = useState('')
+  const [deviceBrand, setDeviceBrand] = useState('')
+  const [deviceInfo, setDeviceInfo] = useState({
+    hostname: '',
+    platform: '',
+    arch: '',
+    osVersion: '',
+    cpu: '',
+    cpuCores: null,
+    totalRam: null,
+    freeRam: null,
+    uptime: null,
+    ipAddress: '',
+    macAddress: '',
+    username: ''
+  })
   const [outlets, setOutlets] = useState([])
   const [userEmail, setUserEmail] = useState('')
   const [userRole, setUserRole] = useState('')
   const [openCloseDialog, setOpenCloseDialog] = useState(false)
+  const [openDeviceDialog, setOpenDeviceDialog] = useState(false)
   const [openedProgress, setOpenedProgress] = useState(false)
   const [downloadProgress, setDownloadProgress] = useState(0)
 
@@ -110,6 +128,68 @@ export const TitleBar = ({ username, theme = 'light', onLogout, showUpdateButton
     } catch (error) {
       console.log(error)
     }
+  }, [])
+
+  const getDeviceUuid = async () => {
+    try {
+      const res = await window.api.device.deviceUuid()
+      if (res) {
+        setDeviceId(res)
+      }
+    } catch (error) {
+      console.error('Failed to get device uuid', error)
+    }
+  }
+
+  const getDeviceName = async () => {
+    try {
+      const res = await window.api.device.deviceName()
+      if (res?.hostname) {
+        const label = `${res.hostname} (${res.platform})`
+        setDeviceName(label)
+      }
+    } catch (error) {
+      console.error('Failed to get device name', error)
+    }
+  }
+  const getDeviceBrand = async () => {
+    try {
+      const res = await window.api.device.deviceBrand()
+      if (res?.manufacturer || res?.model) {
+        setDeviceBrand(`${res.manufacturer} ${res.model}`.trim())
+      }
+    } catch (error) {
+      console.error('Failed to get device brand', error)
+    }
+  }
+
+  const getDeviceInfo = async () => {
+    try {
+      const res = await window.api.device.deviceInfo()
+      console.log(res)
+
+      setDeviceInfo(res)
+    } catch (error) {
+      console.error('Failed to get device info', error)
+    }
+  }
+
+  useEffect(() => {
+    getDeviceName()
+    getDeviceUuid()
+    getDeviceInfo()
+    getDeviceBrand()
+  }, [])
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'F12') {
+        e.preventDefault()
+        setOpenDeviceDialog((prev) => !prev)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
   const handleChangeOutlet = (outlet) => {
@@ -832,6 +912,141 @@ export const TitleBar = ({ username, theme = 'light', onLogout, showUpdateButton
           </Typography>
         </DialogContent>
       </Dialog>
+      <Dialog
+        open={openDeviceDialog}
+        onClose={() => setOpenDeviceDialog(false)}
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            minWidth: 400
+          }
+        }}
+      >
+        <DialogTitle sx={{ pb: 1 }}>
+          <Box display="flex" alignItems="center" gap={2}>
+            <Avatar
+              sx={{
+                bgcolor: 'info.light',
+                color: 'info.main',
+                width: 48,
+                height: 48
+              }}
+            >
+              <Settings />
+            </Avatar>
+            <Box>
+              <Typography variant="h6" fontWeight={700}>
+                Informasi Perangkat
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Detail identifikasi perangkat ini
+              </Typography>
+            </Box>
+          </Box>
+        </DialogTitle>
+
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+            <Box>
+              <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                DEVICE ID
+              </Typography>
+              <Typography
+                variant="body2"
+                sx={{
+                  mt: 0.5,
+                  p: 1.5,
+                  bgcolor: 'grey.100',
+                  borderRadius: 2,
+                  fontFamily: 'monospace',
+                  wordBreak: 'break-all'
+                }}
+              >
+                {deviceId || '-'}
+              </Typography>
+            </Box>
+            <Box>
+              <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                DEVICE NAME
+              </Typography>
+              <Typography
+                variant="body2"
+                sx={{
+                  mt: 0.5,
+                  p: 1.5,
+                  bgcolor: 'grey.100',
+                  borderRadius: 2,
+                  fontFamily: 'monospace'
+                }}
+              >
+                {deviceName || '-'}
+              </Typography>
+            </Box>
+            <Box>
+              <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                DEVICE BRAND
+              </Typography>
+              <Typography
+                variant="body2"
+                sx={{
+                  mt: 0.5,
+                  p: 1.5,
+                  bgcolor: 'grey.100',
+                  borderRadius: 2,
+                  fontFamily: 'monospace'
+                }}
+              >
+                {deviceBrand || '-'}
+              </Typography>
+            </Box>
+            <Box>
+              <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                IP ADDRESS
+              </Typography>
+              <Typography
+                variant="body2"
+                sx={{
+                  mt: 0.5,
+                  p: 1.5,
+                  bgcolor: 'grey.100',
+                  borderRadius: 2,
+                  fontFamily: 'monospace'
+                }}
+              >
+                {deviceInfo?.ipAddress || '-'}
+              </Typography>
+            </Box>
+            <Box>
+              <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                MAC ADDRESS
+              </Typography>
+              <Typography
+                variant="body2"
+                sx={{
+                  mt: 0.5,
+                  p: 1.5,
+                  bgcolor: 'grey.100',
+                  borderRadius: 2,
+                  fontFamily: 'monospace'
+                }}
+              >
+                {deviceInfo?.macAddress || '-'}
+              </Typography>
+            </Box>
+          </Box>
+        </DialogContent>
+
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button
+            onClick={() => setOpenDeviceDialog(false)}
+            variant="contained"
+            sx={{ textTransform: 'none' }}
+          >
+            Tutup
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <Snackbar
         open={updateInfoOpen}
         autoHideDuration={3500}
