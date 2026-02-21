@@ -19,7 +19,8 @@ import {
   ScheduleEmployeePage,
   PurchaseRequestPage,
   CreatePurchaseRequestPage,
-  UpdatePurchaseRequestPage
+  UpdatePurchaseRequestPage,
+  PurchaseOrderPage
 } from '@renderer/pages'
 
 export const appRoutes = [
@@ -178,7 +179,15 @@ export const appRoutes = [
     active: true,
     protected: true,
     redirectTo: '/login'
+  },
+  {
+    path: '/inventory/purchase',
+    element: <PurchaseOrderPage />,
+    active: true,
+    protected: true,
+    redirectTo: '/login'
   }
+
   // #endregion
   // { path: '*', element: <NotFoundPage />, active: true, protected: false }
 ]

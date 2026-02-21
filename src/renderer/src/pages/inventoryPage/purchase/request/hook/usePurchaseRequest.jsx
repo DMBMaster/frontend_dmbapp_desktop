@@ -222,7 +222,7 @@ export const UsePurchaseRequest = () => {
     }),
     columnHelper.accessor('date', {
       header: () => 'Item',
-      cell: (info) => <Typography variant="body1">{info.getValue()}</Typography>
+      cell: (info) => <Typography variant="body1">{info.row.original.items.length}</Typography>
     }),
     columnHelper.accessor('status', {
       header: () => 'Status',

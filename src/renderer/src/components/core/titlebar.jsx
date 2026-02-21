@@ -41,9 +41,12 @@ import { Update as UpdateIcon } from '@mui/icons-material'
 import { useNetworkStore, initNetworkListeners } from '@renderer/store/networkStore'
 import { localdb } from '@renderer/config/localdb'
 import { useConfigStore } from '@renderer/store/configProvider'
+import { useNavigate } from 'react-router-dom'
 
 // eslint-disable-next-line react/prop-types
 export const TitleBar = ({ username, theme = 'light', onLogout, showUpdateButton = false }) => {
+  const navigate = useNavigate()
+
   const { config } = useConfigStore.getState()
   // OUTLET LOGIC
   const userStr = localStorage.getItem('userLogin')
@@ -128,6 +131,28 @@ export const TitleBar = ({ username, theme = 'light', onLogout, showUpdateButton
     } catch (error) {
       console.log(error)
     }
+  }, [])
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      const { key, altKey, ctrlKey } = e
+
+      if (key === 'F4' && altKey) e.preventDefault()
+      if (key === 'F5') e.preventDefault()
+      if (key === 'f' && altKey) e.preventDefault()
+      if (key === 'F11') e.preventDefault()
+      if ((key === 'r' || key === 'R') && ctrlKey) {
+        e.preventDefault()
+        window.location.reload()
+      }
+      if (key === 'i' && ctrlKey) {
+        e.preventDefault()
+        navigate('/xyz/info')
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
   const getDeviceUuid = async () => {

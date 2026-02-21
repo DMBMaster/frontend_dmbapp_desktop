@@ -5,9 +5,7 @@ import {
   CircularProgress,
   Collapse,
   Dialog,
-  DialogActions,
   DialogContent,
-  DialogTitle,
   Divider,
   Grid,
   IconButton,
@@ -36,12 +34,12 @@ import {
 } from '@tabler/icons-react'
 import { flexRender } from '@tanstack/react-table'
 import React from 'react'
-import { UsePurchaseRequest } from './hook/usePurchaseRequest'
-import { getImgUrl } from '@renderer/utils/myFunctions'
+import { UsePurchaseOrder } from './hook/usePurchaseOrder'
+import { formatRupiah, getImgUrl } from '@renderer/utils/myFunctions'
 import { Close } from '@mui/icons-material'
 import { useNavigate } from 'react-router-dom'
 
-export const PurchaseRequestPage = () => {
+export const PurchaseOrderPage = () => {
   const isOnline = useNetworkStore((state) => state.isOnline)
   const navigate = useNavigate()
 
@@ -53,13 +51,11 @@ export const PurchaseRequestPage = () => {
     pageParams,
     setPageParams,
     openRows,
-    RejectionDialog,
     selectedImage,
     setSelectedImage,
     setOpenDialog,
-    openDialog,
-    handleDelete
-  } = UsePurchaseRequest()
+    openDialog
+  } = UsePurchaseOrder()
   const { page, pageSize, pageCount, totalCount } = pageParams
 
   return (
@@ -72,11 +68,11 @@ export const PurchaseRequestPage = () => {
 
       <Breadcrumb
         showBackButton={true}
-        title="Permintaan Pembelian (PR)"
+        title="Pemesanan Pembelian (PO)"
         items={[
           { to: '/', title: 'Home' },
           { title: 'inventory' },
-          { title: 'Permintaan Pembelian' }
+          { title: 'Pemesanan Pembelian' }
         ]}
       />
 
@@ -113,8 +109,8 @@ export const PurchaseRequestPage = () => {
               <TableHead>
                 {table.getHeaderGroups().map((headerGroup) => (
                   <TableRow key={headerGroup.id}>
-                    {headerGroup.headers.map((header) => (
-                      <TableCell key={header.id}>
+                    {headerGroup.headers.map((header, index) => (
+                      <TableCell key={index}>
                         <Box
                           onClick={header.column.getToggleSortingHandler()}
                           sx={{
@@ -166,7 +162,6 @@ export const PurchaseRequestPage = () => {
                 ) : data.length > 0 ? (
                   table.getRowModel().rows.map((row) => {
                     const invoice = row.original
-                    // Gunakan guid sebagai key collapse, konsisten dengan hook
                     const rowId = invoice.guid ?? row.id
                     const isOpen = !!openRows[rowId]
 
@@ -220,10 +215,7 @@ export const PurchaseRequestPage = () => {
                                         <Typography variant="h6">Qty</Typography>
                                       </TableCell>
                                       <TableCell>
-                                        <Typography variant="h6">Satuan</Typography>
-                                      </TableCell>
-                                      <TableCell>
-                                        <Typography variant="h6">Catatan</Typography>
+                                        <Typography variant="h6">Harga</Typography>
                                       </TableCell>
                                     </TableRow>
                                   </TableHead>
@@ -273,12 +265,7 @@ export const PurchaseRequestPage = () => {
                                           </TableCell>
                                           <TableCell>
                                             <Typography color="textSecondary">
-                                              {item.satuan ?? '-'}
-                                            </Typography>
-                                          </TableCell>
-                                          <TableCell>
-                                            <Typography color="textSecondary">
-                                              {item.notes ?? '-'}
+                                              {formatRupiah(item.price)}
                                             </Typography>
                                           </TableCell>
                                         </TableRow>
@@ -440,28 +427,6 @@ export const PurchaseRequestPage = () => {
           </Box>
         </DialogContent>
       </Dialog>
-
-      <Dialog
-        open={openDialog.deleteData}
-        onClose={() => setOpenDialog((prev) => ({ ...prev, deleteData: false }))}
-      >
-        <DialogTitle>Konfirmasi Hapus</DialogTitle>
-        <DialogContent>Apakah Anda yakin ingin menghapus yang dipilih?</DialogContent>
-        <DialogActions>
-          <Button
-            variant="contained"
-            onClick={() => setOpenDialog((prev) => ({ ...prev, deleteData: false }))}
-          >
-            Cancel
-          </Button>
-          <Button color="error" variant="outlined" onClick={handleDelete}>
-            Delete
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Rejection Dialog — render di luar table agar tidak nested di cell */}
-      <RejectionDialog />
     </Box>
   )
 }

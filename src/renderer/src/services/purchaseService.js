@@ -14,6 +14,17 @@ const PurchaseService = () => {
     }
   }
 
+  const getPurchaseOrder = async (params) => {
+    try {
+      const res = await axiosInstance.get('/product-service/v2/stock-transaction', { params })
+      const responseData = res.data
+      return responseData
+    } catch (error) {
+      console.warn('⚠️ API failed → Loading pre-orders from cache')
+      throw error
+    }
+  }
+
   const getDetailPreOrder = async (id) => {
     try {
       const res = await axiosInstance.get(`/product-service/pre-order/${id}`)
@@ -87,7 +98,8 @@ const PurchaseService = () => {
     updatePreOrders,
     rejectPreOrder,
     approvePreOrder,
-    deletePreOrders
+    deletePreOrders,
+    getPurchaseOrder
   }
 }
 

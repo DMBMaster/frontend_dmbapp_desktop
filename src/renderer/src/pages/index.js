@@ -20,6 +20,7 @@ import { PurchaseRequestPage } from './inventoryPage/purchase/request'
 import { NotFoundPage } from './notFoundPage'
 import { CreatePurchaseRequestPage } from './inventoryPage/purchase/request/create'
 import { UpdatePurchaseRequestPage } from './inventoryPage/purchase/request/edit'
+import { PurchaseOrderPage } from './inventoryPage/purchase/order'
 
 export {
   HomePage,
@@ -43,5 +44,6 @@ export {
   PurchaseRequestPage,
   CreatePurchaseRequestPage,
   UpdatePurchaseRequestPage,
+  PurchaseOrderPage,
   NotFoundPage
 }

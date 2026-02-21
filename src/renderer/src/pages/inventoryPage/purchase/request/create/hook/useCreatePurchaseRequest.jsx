@@ -1,6 +1,7 @@
 import { useNotifier } from '@renderer/components/core/NotificationProvider'
 import ProductService from '@renderer/services/productService'
 import PurchaseService from '@renderer/services/purchaseService'
+import { generatePRNumber } from '@renderer/utils/myFunctions'
 import { useEffect } from 'react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -13,7 +14,7 @@ export const UseCreatePurchaseRequest = () => {
 
   const [formData, setFormData] = useState({
     outlet_id: localStorage.getItem('outletGuid'),
-    nomor: generateNumber(),
+    nomor: generatePRNumber(),
     date: new Date().toISOString().split('T')[0],
     notes: '',
     items: [
@@ -33,14 +34,6 @@ export const UseCreatePurchaseRequest = () => {
     fetchProducts: false,
     fetchSatuan: false
   })
-
-  const generateNumber = () => {
-    const prefix = 'PR'
-    const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, '')
-    const randomPart = Math.floor(1000 + Math.random() * 9000)
-
-    return `${prefix}-${datePart}-${randomPart}`
-  }
 
   const fetchSatuan = async () => {
     try {

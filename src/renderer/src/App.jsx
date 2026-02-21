@@ -1,12 +1,5 @@
 import { useEffect } from 'react'
-import {
-  MemoryRouter as Router,
-  Routes,
-  Route,
-  Navigate,
-  useLocation,
-  useNavigate
-} from 'react-router-dom'
+import { MemoryRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { Box, ThemeProvider } from '@mui/material'
 import { appRoutes } from './routes/appRoutes'
 import { NotificationProvider } from './components/core/NotificationProvider'
@@ -22,29 +15,6 @@ const getToken = () => localStorage.getItem('token')
 // eslint-disable-next-line react/prop-types
 const LoginOnlyLayout = ({ children }) => {
   const token = getToken()
-  const navigate = useNavigate()
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      const { key, altKey, ctrlKey } = e
-
-      if (key === 'F4' && altKey) e.preventDefault()
-      if (key === 'F5') e.preventDefault()
-      if (key === 'f' && altKey) e.preventDefault()
-      if (key === 'F11') e.preventDefault()
-      if ((key === 'r' || key === 'R') && ctrlKey) {
-        e.preventDefault()
-        window.location.reload()
-      }
-      if (key === 'i' && ctrlKey) {
-        e.preventDefault()
-        navigate('/xyz/info')
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [])
-
   if (token) {
     return <Navigate to="/dashboard" replace />
   }
