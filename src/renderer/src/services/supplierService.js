@@ -14,9 +14,11 @@ const SupplierService = () => {
     }
   }
 
-  const getSuplierByOutlet = async (outletId) => {
+  const getSuplierByOutlet = async (outletId, params) => {
     try {
-      const res = await axiosInstance.get(`/product-service/v2/suplier/outlet/${outletId}`)
+      const res = await axiosInstance.get(`/product-service/v2/suplier/outlet/${outletId}`, {
+        params
+      })
       const responseData = res.data
       return responseData
     } catch (error) {

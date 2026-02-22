@@ -23,6 +23,7 @@ import { UpdatePurchaseRequestPage } from './inventoryPage/purchase/request/edit
 import { PurchaseOrderPage } from './inventoryPage/purchase/order'
 import { StockOpnamePage } from './inventoryPage/opname'
 import { CreatePurchaseOrderPage } from './inventoryPage/purchase/order/create'
+import { SupplierPage } from './inventoryPage/supplier'
 
 export {
   NotFoundPage,
@@ -49,5 +50,6 @@ export {
   UpdatePurchaseRequestPage,
   PurchaseOrderPage,
   CreatePurchaseOrderPage,
-  StockOpnamePage
+  StockOpnamePage,
+  SupplierPage
 }
