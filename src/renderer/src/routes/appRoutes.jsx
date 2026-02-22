@@ -20,7 +20,9 @@ import {
   PurchaseRequestPage,
   CreatePurchaseRequestPage,
   UpdatePurchaseRequestPage,
-  PurchaseOrderPage
+  PurchaseOrderPage,
+  StockOpnamePage,
+  CreatePurchaseOrderPage
 } from '@renderer/pages'
 
 export const appRoutes = [
@@ -183,6 +185,20 @@ export const appRoutes = [
   {
     path: '/inventory/purchase',
     element: <PurchaseOrderPage />,
+    active: true,
+    protected: true,
+    redirectTo: '/login'
+  },
+  {
+    path: '/inventory/purchase/create',
+    element: <CreatePurchaseOrderPage />,
+    active: true,
+    protected: true,
+    redirectTo: '/login'
+  },
+  {
+    path: '/inventory/opname',
+    element: <StockOpnamePage />,
     active: true,
     protected: true,
     redirectTo: '/login'

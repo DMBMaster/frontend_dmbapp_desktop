@@ -20,7 +20,31 @@ const PurchaseService = () => {
       const responseData = res.data
       return responseData
     } catch (error) {
-      console.warn('⚠️ API failed → Loading pre-orders from cache')
+      console.warn('⚠️ API failed → Loading purchase order data from cache')
+      throw error
+    }
+  }
+
+  const getSuplierByOutlet = async (outletId) => {
+    try {
+      const res = await axiosInstance.get(`/product-service/v2/suplier/outlet/${outletId}`)
+      const responseData = res.data
+      return responseData
+    } catch (error) {
+      console.warn('⚠️ API failed → Loading supplier data from cache')
+      throw error
+    }
+  }
+
+  const getPreOrdersByOutlet = async (outletId, params) => {
+    try {
+      const res = await axiosInstance.get(`/product-service/pre-order/outlet/${outletId}`, {
+        params
+      })
+      const responseData = res.data
+      return responseData
+    } catch (error) {
+      console.warn('⚠️ API failed → Loading pre-orders data from cache')
       throw error
     }
   }
@@ -43,6 +67,17 @@ const PurchaseService = () => {
       return responseData
     } catch (error) {
       console.warn('⚠️ API failed → Loading pre-orders from cache')
+      throw error
+    }
+  }
+
+  const createPurchaseOrder = async (data) => {
+    try {
+      const res = await axiosInstance.post('/product-service/stock-transaction', data)
+      const responseData = res.data
+      return responseData
+    } catch (error) {
+      console.warn('⚠️ API failed → Loading purchase order from cache')
       throw error
     }
   }
@@ -99,7 +134,10 @@ const PurchaseService = () => {
     rejectPreOrder,
     approvePreOrder,
     deletePreOrders,
-    getPurchaseOrder
+    getPurchaseOrder,
+    getSuplierByOutlet,
+    getPreOrdersByOutlet,
+    createPurchaseOrder
   }
 }
 

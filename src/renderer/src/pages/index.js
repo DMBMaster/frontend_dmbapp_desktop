@@ -21,8 +21,11 @@ import { NotFoundPage } from './notFoundPage'
 import { CreatePurchaseRequestPage } from './inventoryPage/purchase/request/create'
 import { UpdatePurchaseRequestPage } from './inventoryPage/purchase/request/edit'
 import { PurchaseOrderPage } from './inventoryPage/purchase/order'
+import { StockOpnamePage } from './inventoryPage/opname'
+import { CreatePurchaseOrderPage } from './inventoryPage/purchase/order/create'
 
 export {
+  NotFoundPage,
   HomePage,
   LoginPage,
   InfoAppPage,
@@ -45,5 +48,6 @@ export {
   CreatePurchaseRequestPage,
   UpdatePurchaseRequestPage,
   PurchaseOrderPage,
-  NotFoundPage
+  CreatePurchaseOrderPage,
+  StockOpnamePage
 }
