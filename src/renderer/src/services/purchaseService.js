@@ -82,6 +82,38 @@ const PurchaseService = () => {
     }
   }
 
+  const getStockRotation = async (params) => {
+    try {
+      const res = await axiosInstance.get('product-service/stock-transaction/daftar-stock', {
+        params
+      })
+      const responseData = res.data
+      return responseData
+    } catch (error) {
+      console.warn('⚠️ API failed → Loading stock rotation data from cache')
+      throw error
+    }
+  }
+
+  const exportStockRotation = async (params) => {
+    try {
+      const res = await axiosInstance.post(
+        'product-service/export-stock-transaction',
+        {
+          params
+        },
+        {
+          responseType: 'blob'
+        }
+      )
+      const responseData = res.data
+      return responseData
+    } catch (error) {
+      console.warn('⚠️ API failed → Loading stock rotation data from cache')
+      throw error
+    }
+  }
+
   const deletePreOrders = async (id) => {
     try {
       const res = await axiosInstance.delete(`/product-service/pre-order/${id}`)
@@ -137,7 +169,9 @@ const PurchaseService = () => {
     getPurchaseOrder,
     getSuplierByOutlet,
     getPreOrdersByOutlet,
-    createPurchaseOrder
+    createPurchaseOrder,
+    getStockRotation,
+    exportStockRotation
   }
 }
 

@@ -167,3 +167,12 @@ export const generatePONumber = () => {
 
   return `${prefix}-${datePart}-${randomPart}`
 }
+
+export const getFirstDayOfCurrentMonth = () => {
+  const date = new Date(today.getFullYear(), today.getMonth(), 1)
+  return formatDate(date)
+}
+
+export const getToday = () => {
+  return formatDate(today) // Today is simply formatted to YYYY-MM-DD
+}
