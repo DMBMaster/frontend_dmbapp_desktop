@@ -100,7 +100,7 @@ export const UseListProduct = () => {
     } finally {
       setLoading((prev) => ({ ...prev, fetchData: false }))
     }
-  }, [productService, pageParams.page, pageParams.pageSize, debouncedSearch])
+  }, [pageParams, debouncedSearch])
 
   const handleDelete = async (id) => {
     try {

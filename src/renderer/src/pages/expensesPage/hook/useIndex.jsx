@@ -6,9 +6,17 @@ import { useCallback, useEffect, useState } from 'react'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import * as XLSX from 'xlsx'
-import { formatDate, formatDateTime, formatRupiah } from '@renderer/utils/myFunctions'
+import {
+  formatDate,
+  formatDateTime,
+  formatRupiah,
+  getFirstDayOfCurrentMonth,
+  getToday
+} from '@renderer/utils/myFunctions'
 import MediaService from '@renderer/services/mediaService'
 import { useNotifier } from '@renderer/components/core/NotificationProvider'
+import { listOutlets } from '@renderer/utils/config'
+import { useDebounce } from '@uidotdev/usehooks'
 
 const getCategoryName = (categoryName) => {
   switch (categoryName) {
@@ -47,9 +55,20 @@ export const UseIndex = () => {
   const [data, setData] = useState([])
   const [categoryData, setCategoryData] = useState([])
   const [employeeData, setEmployeeData] = useState([])
-
-  const [startDate, setStartDate] = useState('')
-  const [endDate, setEndDate] = useState('')
+  const [pageParams, setPageParams] = useState({
+    page: 1,
+    pageSize: 10,
+    totalCount: 0,
+    pageCount: 0,
+    searchTerm: '',
+    outletId: '',
+    startDate: getFirstDayOfCurrentMonth(),
+    endDate: getToday(),
+    categoryId: '',
+    employeeId: '',
+    status: '' // '' = semua, 1 = pending, 2 = approve, 3 = reject
+  })
+  const debouncedSearch = useDebounce(pageParams.searchTerm, 500)
 
   const [loading, setLoading] = useState({
     fetchData: false,
@@ -73,32 +92,56 @@ export const UseIndex = () => {
   const [formData, setFormData] = useState(initialFormData)
   const [previewImage, setPreviewImage] = useState(null)
 
-  const [snackbar, setSnackbar] = useState({
-    open: false,
-    message: '',
-    severity: 'info'
-  })
-
   const [pendingCount, setPendingCount] = useState(0)
 
-  const fetchData = async (params) => {
+  const fetchData = useCallback(async () => {
     setLoading((prev) => ({ ...prev, fetchData: true }))
     try {
-      const queryParams = {
-        outlet_id: params?.outletId || localStorage.getItem('outletGuid'),
-        start_date: params?.startDate,
-        end_date: params?.endDate,
-        category_id: params?.categoryId,
-        employee_id: params?.employeeId
+      let outletIds = []
+      if (pageParams.outletId) {
+        outletIds = [pageParams.outletId]
+      } else {
+        outletIds = listOutlets
+          .filter((outlet) => outlet?.outlet?.guid)
+          .map((data) => data?.outlet.guid)
       }
-      const response = await expensesService.getExpenses(queryParams)
+
+      const params = {
+        p: pageParams.page,
+        ps: pageParams.pageSize,
+        outlet_id: outletIds.join(','),
+        start_date: pageParams?.startDate,
+        end_date: pageParams?.endDate,
+        category_id: pageParams?.categoryId || undefined,
+        employee_id: pageParams?.employeeId || undefined,
+        // Kirim status ke API kalau ada filter-nya
+        status: pageParams?.status || undefined,
+        // Kirim search ke API
+        search: debouncedSearch?.trim() || undefined
+      }
+
+      const response = await expensesService.getExpenses(params)
       setData(response.data || [])
+      const meta = response.meta
+      if (meta) {
+        // Hanya update totalCount & pageCount — JANGAN update page/pageSize dari meta
+        // karena itu akan trigger useEffect lagi → double fetch
+        setPageParams((prev) => ({
+          ...prev,
+          totalCount: meta.totalCount,
+          pageCount: meta.pageCount
+        }))
+      }
     } catch (error) {
-      console.log(error)
+      notifier.show({
+        message: 'Gagal mengambil data',
+        description: error.response?.data?.message || 'Terjadi kesalahan saat mengambil data.',
+        severity: 'error'
+      })
     } finally {
       setLoading((prev) => ({ ...prev, fetchData: false }))
     }
-  }
+  }, [pageParams, debouncedSearch])
 
   const exportToPDF = () => {
     if (data.length === 0) {
@@ -107,7 +150,6 @@ export const UseIndex = () => {
     }
 
     const doc = new jsPDF()
-
     doc.setFont('helvetica')
 
     const outletName = localStorage.getItem('outletName') || 'Semua Outlet'
@@ -122,8 +164,8 @@ export const UseIndex = () => {
 
     doc.setFontSize(12)
     const periodText =
-      startDate && endDate
-        ? `Periode: ${formatDate(startDate)} - ${formatDate(endDate)}`
+      pageParams.startDate && pageParams.endDate
+        ? `Periode: ${formatDate(pageParams.startDate)} - ${formatDate(pageParams.endDate)}`
         : `Tanggal: ${formatDate(new Date())}`
     doc.text(periodText, 105, 40, { align: 'center' })
 
@@ -151,21 +193,14 @@ export const UseIndex = () => {
         head: tableHeaders,
         body: tableData,
         startY: 65,
-        styles: {
-          fontSize: 9,
-          cellPadding: 4,
-          overflow: 'linebreak',
-          halign: 'left'
-        },
+        styles: { fontSize: 9, cellPadding: 4, overflow: 'linebreak', halign: 'left' },
         headStyles: {
           fillColor: [203, 17, 14],
           textColor: 255,
           fontStyle: 'bold',
           halign: 'center'
         },
-        alternateRowStyles: {
-          fillColor: [245, 245, 245]
-        },
+        alternateRowStyles: { fillColor: [245, 245, 245] },
         columnStyles: {
           0: { halign: 'center', cellWidth: 12 },
           1: { cellWidth: 20 },
@@ -193,49 +228,13 @@ export const UseIndex = () => {
         align: 'right'
       })
     } catch (error) {
-      console.error('Error creating table:', error)
-
-      let yPosition = 65
-
-      doc.setFontSize(12)
-      doc.setFont('helvetica', 'bold')
-      doc.text('No', 20, yPosition)
-      doc.text('Tanggal', 30, yPosition)
-      doc.text('Outlet', 50, yPosition)
-      doc.text('Kategori', 80, yPosition)
-      doc.text('Rincian', 110, yPosition)
-      doc.text('Nominal', 160, yPosition)
-      doc.text('Status', 180, yPosition)
-      yPosition += 10
-
-      doc.setFont('helvetica', 'normal')
-      doc.setFontSize(10)
-      data.forEach((item, index) => {
-        doc.text((index + 1).toString(), 20, yPosition)
-        doc.text(formatDate(item.date), 30, yPosition)
-        doc.text(item.outlet_detail?.outlet?.outlet_name || '-', 50, yPosition)
-        doc.text(getCategoryName(item.category_name), 80, yPosition)
-        doc.text(item.description || '-', 110, yPosition)
-        doc.text(formatRupiah(item.nominal), 160, yPosition)
-        doc.text(
-          item.status === 1 ? 'Pending' : item.status === 2 ? 'Approved' : 'Ditolak',
-          180,
-          yPosition
-        )
-        yPosition += 8
-      })
-
-      yPosition += 10
-      doc.setFont('helvetica', 'bold')
-      doc.text(`Total Pengeluaran: Rp ${formatRupiah(grandTotal)}`, 174, yPosition, {
-        align: 'right'
-      })
+      console.error('Error creating PDF table:', error)
     }
 
     const outletNameForFile = outletName.replace(/[^a-zA-Z0-9]/g, '_')
     const filename = `Laporan_Pengeluaran_${outletNameForFile}_${
-      startDate || formatDate(new Date())
-    }_${endDate || formatDate(new Date())}.pdf`
+      pageParams.startDate || formatDate(new Date())
+    }_${pageParams.endDate || formatDate(new Date())}.pdf`
     doc.save(filename)
   }
 
@@ -251,8 +250,8 @@ export const UseIndex = () => {
       ['Laporan Riwayat Pengeluaran'],
       [outletName],
       [
-        startDate && endDate
-          ? `Periode: ${formatDate(startDate)} - ${formatDate(endDate)}`
+        pageParams.startDate && pageParams.endDate
+          ? `Periode: ${formatDate(pageParams.startDate)} - ${formatDate(pageParams.endDate)}`
           : `Tanggal: ${formatDate(new Date())}`
       ],
       [`Dicetak pada: ${new Date().toLocaleString('id-ID')}`],
@@ -326,16 +325,18 @@ export const UseIndex = () => {
     }
 
     const totalCell = XLSX.utils.encode_cell({ r: wsData.length - 1, c: 7 })
-    ws[totalCell].t = 'n'
-    ws[totalCell].z = '#,##0'
+    if (ws[totalCell]) {
+      ws[totalCell].t = 'n'
+      ws[totalCell].z = '#,##0'
+    }
 
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, 'Laporan Pengeluaran')
 
     const outletNameForFile = outletName.replace(/[^a-zA-Z0-9]/g, '_')
     const fileName = `Laporan_Pengeluaran_${outletNameForFile}_${
-      startDate || formatDate(new Date())
-    }_${endDate || formatDate(new Date())}.xlsx`
+      pageParams.startDate || formatDate(new Date())
+    }_${pageParams.endDate || formatDate(new Date())}.xlsx`
 
     XLSX.writeFile(wb, fileName)
   }
@@ -346,7 +347,12 @@ export const UseIndex = () => {
       const response = await expensesCategoryService.getExpensesCategories()
       setCategoryData(response.data || [])
     } catch (error) {
-      console.log(error)
+      notifier.show({
+        message: 'Gagal mengambil data kategori',
+        description:
+          error.response?.data?.message || 'Terjadi kesalahan saat mengambil data kategori.',
+        severity: 'error'
+      })
     } finally {
       setLoading((prev) => ({ ...prev, fetchCategoryData: false }))
     }
@@ -356,12 +362,19 @@ export const UseIndex = () => {
     setLoading((prev) => ({ ...prev, fetchEmployeeData: true }))
     try {
       const params = {
-        outlet_id: localStorage.getItem('outletGuid')
+        outlet_id: localStorage.getItem('outletGuid'),
+        p: 1,
+        ps: 20
       }
       const response = await employeeService.getEmployees(params)
       setEmployeeData(response.data || [])
     } catch (error) {
-      console.log(error)
+      notifier.show({
+        message: 'Gagal mengambil data karyawan',
+        description:
+          error.response?.data?.message || 'Terjadi kesalahan saat mengambil data karyawan.',
+        severity: 'error'
+      })
     } finally {
       setLoading((prev) => ({ ...prev, fetchEmployeeData: false }))
     }
@@ -372,9 +385,7 @@ export const UseIndex = () => {
     setPendingCount(count)
   }, [expensesService])
 
-  const handleOpenModal = () => {
-    setOpenModal(true)
-  }
+  const handleOpenModal = () => setOpenModal(true)
 
   const handleCloseModal = () => {
     setOpenModal(false)
@@ -398,9 +409,7 @@ export const UseIndex = () => {
 
     if (file) {
       const reader = new FileReader()
-      reader.onloadend = () => {
-        setPreviewImage(reader.result)
-      }
+      reader.onloadend = () => setPreviewImage(reader.result)
       reader.readAsDataURL(file)
     } else {
       setPreviewImage(null)
@@ -432,21 +441,29 @@ export const UseIndex = () => {
     e.preventDefault()
 
     if (!formData.category_name) {
-      setSnackbar({ open: true, message: 'Kategori wajib dipilih', severity: 'error' })
+      notifier.show({
+        message: 'Kategori wajib dipilih',
+        description: 'Silakan pilih kategori pengeluaran.',
+        severity: 'error'
+      })
       return
     }
 
     if (!formData.nominal || parseInt(formData.nominal) <= 0) {
-      setSnackbar({
-        open: true,
-        message: 'Nominal wajib diisi dan harus lebih dari 0',
+      notifier.show({
+        message: 'Nominal tidak valid',
+        description: 'Silakan masukkan nominal yang valid (lebih dari 0).',
         severity: 'error'
       })
       return
     }
 
     if (!formData.description.trim()) {
-      setSnackbar({ open: true, message: 'Rincian/Deskripsi wajib diisi', severity: 'error' })
+      notifier.show({
+        message: 'Rincian wajib diisi',
+        description: 'Silakan isi rincian atau deskripsi pengeluaran.',
+        severity: 'error'
+      })
       return
     }
 
@@ -460,14 +477,14 @@ export const UseIndex = () => {
           const result = await mediaService.uploadReceipt(formData.receipt)
           uploadedReceiptUrl = result.url
           notifier.show({
-            message: 'File uploaded successfully',
-            description: 'Receipt uploaded successfully',
+            message: 'File berhasil diupload',
+            description: 'Bukti pengeluaran berhasil diupload.',
             severity: 'success'
           })
         } catch (error) {
           notifier.show({
-            message: 'Error uploading file',
-            description: `There was an error uploading the receipt. ${error.message}`,
+            message: 'Gagal upload file',
+            description: `Terjadi kesalahan saat upload bukti. ${error.message}`,
             severity: 'error'
           })
         }
@@ -486,16 +503,17 @@ export const UseIndex = () => {
       const response = await expensesService.createExpenses(payload)
 
       if (response.offline || response.pending) {
-        setSnackbar({
-          open: true,
-          message: '📴 Pengeluaran disimpan offline. Akan disinkronkan saat online.',
+        notifier.show({
+          message: 'Pengeluaran disimpan offline',
+          description:
+            'Pengeluaran Anda disimpan secara offline dan akan disinkronkan saat koneksi internet tersedia.',
           severity: 'warning'
         })
         await fetchPendingCount()
       } else {
-        setSnackbar({
-          open: true,
-          message: '✅ Pengeluaran berhasil disimpan!',
+        notifier.show({
+          message: 'Pengeluaran berhasil disimpan',
+          description: 'Pengeluaran Anda telah berhasil disimpan.',
           severity: 'success'
         })
       }
@@ -506,9 +524,10 @@ export const UseIndex = () => {
       }, 1000)
     } catch (error) {
       console.error('Error creating expense:', error)
-      setSnackbar({
-        open: true,
-        message: 'Gagal menyimpan pengeluaran. Silakan coba lagi.',
+      notifier.show({
+        message: 'Gagal menyimpan pengeluaran',
+        description:
+          error.response?.data?.message || 'Terjadi kesalahan saat menyimpan pengeluaran.',
         severity: 'error'
       })
     } finally {
@@ -516,15 +535,11 @@ export const UseIndex = () => {
     }
   }
 
-  const handleCloseSnackbar = () => {
-    setSnackbar((prev) => ({ ...prev, open: false }))
-  }
-
   const syncPendingExpenses = useCallback(async () => {
     if (!isOnline) {
-      setSnackbar({
-        open: true,
-        message: '📴 Tidak dapat sync, Anda sedang offline',
+      notifier.show({
+        message: 'Tidak dapat menyinkronkan',
+        description: 'Anda sedang offline. Pastikan koneksi internet Anda stabil.',
         severity: 'warning'
       })
       return
@@ -534,9 +549,9 @@ export const UseIndex = () => {
     const expensesResult = result.find((r) => r.service === 'expenses')
 
     if (expensesResult && expensesResult.synced > 0) {
-      setSnackbar({
-        open: true,
-        message: `✅ ${expensesResult.synced} pengeluaran berhasil disinkronkan!`,
+      notifier.show({
+        message: 'Sinkronisasi berhasil',
+        description: `${expensesResult.synced} pengeluaran berhasil disinkronkan!`,
         severity: 'success'
       })
       fetchData()
@@ -544,25 +559,40 @@ export const UseIndex = () => {
     await fetchPendingCount()
   }, [isOnline, fetchPendingCount])
 
+  // Initial load
   useEffect(() => {
-    fetchData()
     fetchCategoryData()
     fetchEmployeeData()
     fetchPendingCount()
   }, [])
 
+  // Re-fetch saat filter berubah (termasuk tanggal, status, search, outlet, kategori, karyawan)
+  useEffect(() => {
+    fetchData()
+  }, [
+    pageParams.page,
+    pageParams.pageSize,
+    pageParams.categoryId,
+    pageParams.employeeId,
+    pageParams.outletId,
+    pageParams.startDate,
+    pageParams.endDate,
+    pageParams.status,
+    debouncedSearch
+  ])
+
+  // Auto-sync listener dari network store
   useEffect(() => {
     const unsubscribe = useNetworkStore.subscribe((state, prevState) => {
       const expensesResult = state.lastSyncResult.find((r) => r.service === 'expenses')
       const prevExpensesResult = prevState.lastSyncResult.find((r) => r.service === 'expenses')
 
       if (expensesResult && expensesResult.synced > 0 && expensesResult !== prevExpensesResult) {
-        setSnackbar({
-          open: true,
-          message: `✅ ${expensesResult.synced} pengeluaran berhasil disinkronkan!`,
+        notifier.show({
+          message: 'Sinkronisasi berhasil',
+          description: `${expensesResult.synced} pengeluaran berhasil disinkronkan!`,
           severity: 'success'
         })
-
         fetchData()
         fetchPendingCount()
       }
@@ -580,11 +610,6 @@ export const UseIndex = () => {
     exportToPDF,
     exportToExcel,
 
-    startDate,
-    setStartDate,
-    endDate,
-    setEndDate,
-
     openModal,
     handleOpenModal,
     handleCloseModal,
@@ -598,10 +623,8 @@ export const UseIndex = () => {
     handleRemoveImage,
     handleSubmit,
     formatNominal,
-
-    snackbar,
-    handleCloseSnackbar,
-
+    pageParams,
+    setPageParams,
     isOnline,
     pendingCount,
     syncPendingExpenses

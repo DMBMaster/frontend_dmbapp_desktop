@@ -29,9 +29,7 @@ import {
   FormControl,
   InputLabel,
   Select,
-  InputAdornment,
-  Snackbar,
-  Alert
+  InputAdornment
 } from '@mui/material'
 import {
   useReactTable,
@@ -54,6 +52,7 @@ import {
   IconFilterX,
   IconFileTypePdf,
   IconFileSpreadsheet,
+  IconList,
   IconPlus,
   IconUpload,
   IconTrash,
@@ -65,15 +64,8 @@ import { formatDate, formatDateTime, formatRupiah, getImgUrl } from '@renderer/u
 import Breadcrumb from '@renderer/components/ui/breadcrumb/Breadcrumb'
 import { listOutlets } from '@renderer/utils/config'
 import { PictureAsPdf } from '@mui/icons-material'
-const BCrumb = [
-  {
-    to: '/',
-    title: 'Home'
-  },
-  {
-    title: 'Pengeluaran'
-  }
-]
+
+const BCrumb = [{ to: '/', title: 'Home' }, { title: 'Pengeluaran' }]
 
 function a11yProps(index) {
   return {
@@ -84,17 +76,14 @@ function a11yProps(index) {
 
 export const ExpensesPage = () => {
   const {
-    // List data
     data,
     loading,
     categoryData,
     employeeData,
     fetchData,
-    // Modal
     openModal,
     handleOpenModal,
     handleCloseModal,
-    // Form
     formData,
     previewImage,
     handleChange,
@@ -104,81 +93,48 @@ export const ExpensesPage = () => {
     handleRemoveImage,
     handleSubmit,
     formatNominal,
-    // Snackbar
-    snackbar,
-    handleCloseSnackbar,
-    // Network & Pending
     isOnline,
     pendingCount,
     syncPendingExpenses,
-    startDate,
-    setStartDate,
-    endDate,
-    setEndDate,
     exportToPDF,
-    exportToExcel
+    exportToExcel,
+    pageParams,
+    setPageParams
   } = UseIndex()
 
+  const {
+    page,
+    pageSize,
+    totalCount,
+    pageCount,
+    searchTerm,
+    outletId,
+    startDate,
+    endDate,
+    categoryId,
+    employeeId,
+    status
+  } = pageParams
+
   const navigate = useNavigate()
-
-  const [selectedStatusExpanses, setSelectedStatusExpanses] = useState(0)
-  const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(10)
-  const [sorting, setSorting] = useState()
-
-  // Filter states
-  const [selectedOutlet, setSelectedOutlet] = useState(
-    listOutlets && listOutlets.length > 0 ? listOutlets[0] : null
-  )
-
-  const [filterCategory, setFilterCategory] = useState('')
-  const [filterEmployee, setFilterEmployee] = useState('')
-  const [searchTerm, setSearchTerm] = useState('')
+  const [sorting, setSorting] = useState([])
 
   // Image preview dialog
   const [openPreview, setOpenPreview] = useState(false)
   const [previewImageUrl, setPreviewImageUrl] = useState('')
 
-  // Category filter options
-  const categoryFilterOptions = useMemo(() => {
-    const options = [{ value: '', label: 'Semua Kategori' }]
-    if (categoryData && categoryData.length > 0) {
-      categoryData.forEach((category) => {
-        options.push({
-          value: category.id.toString(),
-          label: category.name
-        })
-      })
-    }
-    return options
-  }, [categoryData])
+  // Tab index: 0=Semua, 1=Pending, 2=Approve, 3=Reject
+  const selectedTab = status === '' ? 0 : status
 
-  // Employee filter options
-  const employeeOptions = useMemo(() => {
-    const options = [{ value: '', label: 'Semua Karyawan' }]
-    if (employeeData && employeeData.length > 0) {
-      employeeData.forEach((employee) => {
-        options.push({
-          value: employee.guid,
-          label: employee.employee_name
-        })
-      })
-    }
-    return options
-  }, [employeeData])
-
-  // Handle fetch data with filters
-  const handleFetchData = () => {
-    fetchData({
-      outletId: selectedOutlet?.outlet_id,
-      startDate,
-      endDate,
-      categoryId: filterCategory,
-      employeeId: filterEmployee
-    })
+  const handleTabChange = (_, newValue) => {
+    // newValue: 0,1,2,3
+    setPageParams((prev) => ({
+      ...prev,
+      status: newValue === 0 ? '' : newValue,
+      page: 1
+    }))
   }
 
-  // Get category name helper
   const getCategoryName = (categoryName) => {
     const categoryMap = {
       raw_material: 'Beli Bahan Baku',
@@ -194,56 +150,21 @@ export const ExpensesPage = () => {
     return categoryMap[categoryName] || categoryName || '-'
   }
 
-  // Get status label
-  const getStatusExpenses = (status) => {
-    let color = 'warning'
-    let label = 'Pending'
-
-    if (status === 2) {
-      color = 'success'
-      label = 'Approve'
-    } else if (status === 3) {
-      color = 'error'
-      label = 'Reject'
-    }
-
-    return <Chip label={label} color={color} size="small" />
+  const getStatusChip = (status) => {
+    if (status === 2) return <Chip label="Approve" color="success" size="small" />
+    if (status === 3) return <Chip label="Reject" color="error" size="small" />
+    return <Chip label="Pending" color="warning" size="small" />
   }
-
-  // Filter data by status and search term
-  const filteredData = useMemo(() => {
-    let result = data
-
-    // Filter by status
-    if (selectedStatusExpanses !== 0) {
-      result = result.filter((item) => item.status === selectedStatusExpanses)
-    }
-
-    // Filter by search term
-    if (searchTerm.trim() !== '') {
-      const searchLower = searchTerm.toLowerCase()
-      result = result.filter(
-        (item) =>
-          item.reference_number?.toLowerCase().includes(searchLower) ||
-          item.user_full_name?.toLowerCase().includes(searchLower) ||
-          item.description?.toLowerCase().includes(searchLower) ||
-          getCategoryName(item.category_name).toLowerCase().includes(searchLower)
-      )
-    }
-
-    return result
-  }, [data, selectedStatusExpanses, searchTerm])
 
   // Column helper
   const columnHelper = createColumnHelper()
 
-  // Define columns
   const columns = useMemo(
     () => [
       columnHelper.accessor('reference_number', {
         enableSorting: true,
         header: () => (
-          <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+          <Typography variant="body2" fontWeight="bold">
             Nomor Referensi
           </Typography>
         ),
@@ -252,25 +173,25 @@ export const ExpensesPage = () => {
       columnHelper.accessor('created_at', {
         enableSorting: true,
         header: () => (
-          <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+          <Typography variant="body2" fontWeight="bold">
             Waktu Input
           </Typography>
         ),
         cell: (info) => <Typography variant="body2">{formatDateTime(info.getValue())}</Typography>
       }),
-      //   columnHelper.accessor('outlet_name', {
-      //     enableSorting: true,
-      //     header: () => (
-      //       <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-      //         Outlet
-      //       </Typography>
-      //     ),
-      //     cell: (info) => <Typography variant="body2">{info.getValue() || '-'}</Typography>
-      //   }),
+      columnHelper.accessor('outlet_detail.outlet.outlet_name', {
+        enableSorting: true,
+        header: () => (
+          <Typography variant="body2" fontWeight="bold">
+            Outlet
+          </Typography>
+        ),
+        cell: (info) => <Typography variant="body2">{info.getValue() || '-'}</Typography>
+      }),
       columnHelper.accessor('date', {
         enableSorting: true,
         header: () => (
-          <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+          <Typography variant="body2" fontWeight="bold">
             Tanggal
           </Typography>
         ),
@@ -279,7 +200,7 @@ export const ExpensesPage = () => {
       columnHelper.accessor('user_full_name', {
         enableSorting: true,
         header: () => (
-          <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+          <Typography variant="body2" fontWeight="bold">
             Dibuat
           </Typography>
         ),
@@ -288,7 +209,7 @@ export const ExpensesPage = () => {
       columnHelper.accessor('category_name', {
         enableSorting: true,
         header: () => (
-          <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+          <Typography variant="body2" fontWeight="bold">
             Kategori
           </Typography>
         ),
@@ -297,7 +218,7 @@ export const ExpensesPage = () => {
       columnHelper.accessor('description', {
         enableSorting: true,
         header: () => (
-          <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+          <Typography variant="body2" fontWeight="bold">
             Rincian
           </Typography>
         ),
@@ -306,7 +227,7 @@ export const ExpensesPage = () => {
       columnHelper.accessor('nominal', {
         enableSorting: true,
         header: () => (
-          <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+          <Typography variant="body2" fontWeight="bold">
             Nominal
           </Typography>
         ),
@@ -315,13 +236,15 @@ export const ExpensesPage = () => {
         )
       }),
       columnHelper.accessor('receipt', {
-        enableSorting: true,
-        header: 'Bukti',
+        enableSorting: false,
+        header: () => (
+          <Typography variant="body2" fontWeight="bold">
+            Bukti
+          </Typography>
+        ),
         cell: (info) => {
-          const productName = info.getValue()
-
-          // Jika tidak ada foto, tampilkan teks
-          if (!productName) {
+          const receiptPath = info.getValue()
+          if (!receiptPath) {
             return (
               <Typography variant="body2" color="text.secondary">
                 Tidak ada bukti
@@ -329,120 +252,114 @@ export const ExpensesPage = () => {
             )
           }
 
-          // Normalize path (remove '/file/' segment) and detect type
-          const productPath = productName ? productName.replace('/file/', '/') : productName
-          const fullUrl = `${getImgUrl(productPath)}`
-          const isImage = /\.(jpe?g|png|gif|webp|bmp|svg)(\?.*)?$/i.test(productPath || '')
-
-          const handleImageClick = () => {
-            setPreviewImageUrl(fullUrl)
-            setOpenPreview(true)
-          }
+          const normalizedPath = receiptPath.replace('/file/', '/')
+          const fullUrl = getImgUrl(normalizedPath)
+          const isImage = /\.(jpe?g|png|gif|webp|bmp|svg)(\?.*)?$/i.test(normalizedPath || '')
 
           if (isImage) {
             return (
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                <img
-                  src={fullUrl}
-                  alt={productName}
-                  style={{
-                    width: '40px',
-                    height: '40px',
-                    marginRight: '8px',
-                    cursor: 'pointer'
-                  }}
-                  onClick={handleImageClick}
-                />
-                <Dialog open={openPreview} onClose={() => setOpenPreview(false)}>
-                  <DialogContent>
-                    <img
-                      src={previewImageUrl}
-                      alt="Preview"
-                      style={{ width: '100%', height: 'auto' }}
-                    />
-                  </DialogContent>
-                  <DialogActions>
-                    <Button onClick={() => setOpenPreview(false)} color="primary">
-                      Close
-                    </Button>
-                  </DialogActions>
-                </Dialog>
-              </div>
+              <img
+                src={fullUrl}
+                alt="Bukti"
+                style={{
+                  width: 40,
+                  height: 40,
+                  cursor: 'pointer',
+                  objectFit: 'cover',
+                  borderRadius: 4
+                }}
+                onClick={() => {
+                  setPreviewImageUrl(fullUrl)
+                  setOpenPreview(true)
+                }}
+              />
             )
           }
 
           return (
-            <Box display="flex" alignItems="center" gap={1}>
-              <a href={fullUrl} target="_blank" rel="noopener noreferrer">
-                <PictureAsPdf fontSize="small" />
-              </a>
-            </Box>
+            <a href={fullUrl} target="_blank" rel="noopener noreferrer">
+              <PictureAsPdf fontSize="small" />
+            </a>
           )
         }
       }),
       columnHelper.accessor('status', {
+        enableSorting: false,
         header: () => (
-          <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+          <Typography variant="body2" fontWeight="bold">
             Status
           </Typography>
         ),
-        cell: (info) => getStatusExpenses(info.getValue())
+        cell: (info) => getStatusChip(info.getValue())
       }),
       columnHelper.accessor('guid', {
+        enableSorting: false,
         header: () => (
-          <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+          <Typography variant="body2" fontWeight="bold">
             Aksi
           </Typography>
         ),
-        cell: (info) => {
-          return (
-            <Box display="flex" justifyContent="center" gap={1}>
-              <IconButton
-                color="primary"
-                onClick={() => {
-                  navigate(`/expenses/detail/${info.getValue()}`)
-                }}
-              >
-                <IconEye width={22} />
-              </IconButton>
-            </Box>
-          )
-        }
+        cell: (info) => (
+          <Box display="flex" justifyContent="center">
+            <IconButton
+              color="primary"
+              size="small"
+              onClick={() => navigate(`/expenses/detail/${info.getValue()}`)}
+            >
+              <IconEye width={22} />
+            </IconButton>
+          </Box>
+        )
       })
     ],
     []
   )
 
-  // Calculate pagination
-  const totalCount = filteredData.length
-  const pageCount = Math.ceil(totalCount / pageSize)
-
-  // React Table instance
+  // React Table instance — pakai data langsung dari server (filtering sudah server-side)
   const table = useReactTable({
-    data: filteredData,
+    data,
     columns,
-    pageCount,
+    pageCount: pageParams.pageCount,
     state: {
-      pagination: { pageIndex: page - 1, pageSize },
+      pagination: {
+        pageIndex: pageParams.page - 1,
+        pageSize: pageParams.pageSize
+      },
       sorting
     },
     onSortingChange: setSorting,
+    onPaginationChange: (updater) => {
+      const next =
+        typeof updater === 'function'
+          ? updater({ pageIndex: pageParams.page - 1, pageSize: pageParams.pageSize })
+          : updater
+      setPageParams((prev) => ({
+        ...prev,
+        page: next.pageIndex + 1,
+        pageSize: next.pageSize
+      }))
+    },
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    manualPagination: false
+    manualPagination: true,
+    manualSorting: true
   })
+
+  // Outlet options untuk Autocomplete
+  const selectedOutletOption = listOutlets.find((o) => o?.outlet?.guid === outletId) || null
 
   return (
     <Box>
       <Breadcrumb title="Riwayat Pengeluaran" items={BCrumb} />
+
+      {/* Header Actions */}
       <Stack direction="row" spacing={2} mb={3} justifyContent="space-between" alignItems="center">
-        {/* Network & Pending Status */}
         <Box>
           {pendingCount > 0 && (
             <Chip
               icon={<IconWifiOff size={16} />}
-              label={`${pendingCount} pending`}
+              label={`${pendingCount} pending (klik untuk sync)`}
               color="warning"
               size="small"
               onClick={isOnline ? syncPendingExpenses : undefined}
@@ -457,95 +374,142 @@ export const ExpensesPage = () => {
 
       <Grid container spacing={3}>
         <Grid size={{ xs: 12 }}>
-          {/* Filter Section */}
+          {/* ===== Filter Section ===== */}
           <Paper elevation={0} sx={{ p: 3, mb: 3, borderRadius: 2 }}>
             <Grid container spacing={2}>
-              {/* Row 1: Outlet, Tanggal Mulai, Tanggal Akhir */}
+              {/* Outlet — hanya tampil jika lebih dari 1 outlet */}
               {listOutlets && listOutlets.length > 1 && (
                 <Grid size={{ xs: 12, md: 4 }}>
                   <Autocomplete
-                    value={selectedOutlet}
+                    value={selectedOutletOption}
                     onChange={(_, newValue) => {
-                      setSelectedOutlet(newValue)
+                      setPageParams((prev) => ({
+                        ...prev,
+                        outletId: newValue?.guid || '',
+                        page: 1
+                      }))
                     }}
                     options={listOutlets}
-                    getOptionLabel={(option) => option?.outlet?.outlet_name || ''}
-                    isOptionEqualToValue={(option, value) => option?.outlet_id === value?.outlet_id}
+                    getOptionLabel={(option) => option?.outlet?.outlet_name || option?.name || ''}
+                    isOptionEqualToValue={(option, value) =>
+                      option?.outlet?.guid === value?.outlet?.guid
+                    }
                     renderInput={(params) => (
-                      <TextField {...params} label="Pilih Outlet" fullWidth variant="outlined" />
+                      <TextField {...params} label="Pilih Outlet" fullWidth size="small" />
                     )}
                   />
                 </Grid>
               )}
 
+              {/* Tanggal Mulai */}
               <Grid size={{ xs: 12, md: listOutlets && listOutlets.length > 1 ? 4 : 6 }}>
                 <TextField
-                  id="start-date"
                   label="Tanggal Mulai"
                   type="date"
                   fullWidth
-                  variant="outlined"
+                  size="small"
                   value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
+                  onChange={(e) =>
+                    setPageParams((prev) => ({ ...prev, startDate: e.target.value, page: 1 }))
+                  }
                   InputLabelProps={{ shrink: true }}
                 />
               </Grid>
 
+              {/* Tanggal Akhir */}
               <Grid size={{ xs: 12, md: listOutlets && listOutlets.length > 1 ? 4 : 6 }}>
                 <TextField
-                  id="end-date"
                   label="Tanggal Akhir"
                   type="date"
                   fullWidth
-                  variant="outlined"
+                  size="small"
                   value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
+                  onChange={(e) =>
+                    setPageParams((prev) => ({ ...prev, endDate: e.target.value, page: 1 }))
+                  }
                   InputLabelProps={{ shrink: true }}
                 />
               </Grid>
 
-              {/* Row 2: Filter Kategori, Filter Karyawan */}
+              {/* Filter Kategori */}
               <Grid size={{ xs: 12, md: 6 }}>
-                <FormControl fullWidth variant="outlined">
-                  <Select
-                    labelId="category-filter-label"
-                    id="category-filter"
-                    value={filterCategory}
-                    onChange={(e) => setFilterCategory(e.target.value)}
-                    displayEmpty
-                  >
-                    {categoryFilterOptions.map((option) => (
-                      <MenuItem key={option.value} value={option.value}>
-                        {option.label}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+                <Autocomplete
+                  loading={loading.fetchCategoryData}
+                  value={categoryData.find((c) => c.guid === categoryId) || null}
+                  onChange={(_, newValue) => {
+                    setPageParams((prev) => ({
+                      ...prev,
+                      categoryId: newValue ? newValue.guid : '',
+                      page: 1
+                    }))
+                  }}
+                  options={categoryData}
+                  getOptionLabel={(option) => option.name || ''}
+                  isOptionEqualToValue={(option, value) => option.guid === value.guid}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Filter Kategori"
+                      fullWidth
+                      size="small"
+                      InputProps={{
+                        ...params.InputProps,
+                        endAdornment: (
+                          <>
+                            {loading.fetchCategoryData ? (
+                              <CircularProgress color="inherit" size={18} />
+                            ) : null}
+                            {params.InputProps.endAdornment}
+                          </>
+                        )
+                      }}
+                    />
+                  )}
+                />
               </Grid>
 
+              {/* Filter Karyawan */}
               <Grid size={{ xs: 12, md: 6 }}>
-                <FormControl fullWidth variant="outlined">
-                  <Select
-                    labelId="employee-filter-label"
-                    id="employee-filter"
-                    value={filterEmployee}
-                    onChange={(e) => setFilterEmployee(e.target.value)}
-                    displayEmpty
-                  >
-                    {employeeOptions.map((employee) => (
-                      <MenuItem key={employee.value} value={employee.value}>
-                        {employee.label}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+                <Autocomplete
+                  loading={loading.fetchEmployeeData}
+                  value={employeeData.find((e) => e.guid === employeeId) || null}
+                  onChange={(_, newValue) => {
+                    setPageParams((prev) => ({
+                      ...prev,
+                      employeeId: newValue ? newValue.guid : '',
+                      page: 1
+                    }))
+                  }}
+                  options={employeeData}
+                  getOptionLabel={(option) => option.employee_name || option.name || ''}
+                  isOptionEqualToValue={(option, value) => option.guid === value.guid}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Filter Karyawan"
+                      fullWidth
+                      size="small"
+                      InputProps={{
+                        ...params.InputProps,
+                        endAdornment: (
+                          <>
+                            {loading.fetchEmployeeData ? (
+                              <CircularProgress color="inherit" size={18} />
+                            ) : null}
+                            {params.InputProps.endAdornment}
+                          </>
+                        )
+                      }}
+                    />
+                  )}
+                />
               </Grid>
 
-              {/* Row 3: Fetch Data Button */}
+              {/* Tombol Fetch Data */}
               <Grid size={{ xs: 12 }}>
                 <Button
                   variant="contained"
-                  onClick={handleFetchData}
+                  onClick={fetchData}
                   disabled={!startDate || !endDate || loading.fetchData}
                   fullWidth
                   size="large"
@@ -554,13 +518,16 @@ export const ExpensesPage = () => {
                 </Button>
               </Grid>
 
-              {/* Row 4: Search & Export Buttons */}
+              {/* Search + Export */}
               <Grid size={{ xs: 12, md: 6 }}>
                 <TextField
                   variant="outlined"
+                  size="small"
                   placeholder="Cari (Nomor Ref, Nama, Rincian, Kategori)"
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) =>
+                    setPageParams((prev) => ({ ...prev, searchTerm: e.target.value, page: 1 }))
+                  }
                   fullWidth
                 />
               </Grid>
@@ -572,7 +539,7 @@ export const ExpensesPage = () => {
                   fullWidth
                   onClick={exportToPDF}
                   sx={{ height: '100%' }}
-                  disabled={filteredData.length === 0}
+                  disabled={data.length === 0}
                 >
                   Export PDF
                 </Button>
@@ -585,7 +552,7 @@ export const ExpensesPage = () => {
                   startIcon={<IconFileSpreadsheet size={20} />}
                   fullWidth
                   sx={{ height: '100%' }}
-                  disabled={filteredData.length === 0}
+                  disabled={data.length === 0}
                   onClick={exportToExcel}
                 >
                   Excel
@@ -594,31 +561,36 @@ export const ExpensesPage = () => {
             </Grid>
           </Paper>
 
-          {/* Table Section */}
+          {/* ===== Table Section ===== */}
           <Paper elevation={0} sx={{ borderRadius: 2 }}>
-            {/* Header with Tabs */}
+            {/* Status Tabs */}
             <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 3, pt: 3 }}>
               <Tabs
-                value={selectedStatusExpanses}
-                onChange={(_, newValue) => setSelectedStatusExpanses(newValue)}
+                value={selectedTab}
+                onChange={handleTabChange}
                 aria-label="expenses status tabs"
               >
-                <Tab iconPosition="start" label="SEMUA" {...a11yProps(0)} />
                 <Tab
                   iconPosition="start"
-                  icon={<IconFilterPause size="18" />}
+                  icon={<IconList size={18} />}
+                  label="SEMUA"
+                  {...a11yProps(0)}
+                />
+                <Tab
+                  iconPosition="start"
+                  icon={<IconFilterPause size={18} />}
                   label="PENDING"
                   {...a11yProps(1)}
                 />
                 <Tab
                   iconPosition="start"
-                  icon={<IconFilterCheck size="18" />}
+                  icon={<IconFilterCheck size={18} />}
                   label="APPROVE"
                   {...a11yProps(2)}
                 />
                 <Tab
                   iconPosition="start"
-                  icon={<IconFilterX size="18" />}
+                  icon={<IconFilterX size={18} />}
                   label="REJECT"
                   {...a11yProps(3)}
                 />
@@ -626,7 +598,7 @@ export const ExpensesPage = () => {
             </Box>
             <Divider />
 
-            {/* Table Section */}
+            {/* Table */}
             <TableContainer sx={{ px: 2 }}>
               <Table>
                 <TableHead>
@@ -637,25 +609,18 @@ export const ExpensesPage = () => {
                           <Box
                             onClick={header.column.getToggleSortingHandler()}
                             sx={{
-                              cursor: 'pointer',
+                              cursor: header.column.getCanSort() ? 'pointer' : 'default',
                               display: 'flex',
                               alignItems: 'center',
                               gap: 1,
-                              '&:hover': {
-                                color: 'primary.main'
-                              }
+                              '&:hover': { color: 'primary.main' }
                             }}
                           >
                             <Typography variant="h6" mb={1}>
                               {flexRender(header.column.columnDef.header, header.getContext())}
                             </Typography>
                             {header.column.getCanSort() && (
-                              <Box
-                                sx={{
-                                  display: 'flex',
-                                  flexDirection: 'column'
-                                }}
-                              >
+                              <Box sx={{ display: 'flex', flexDirection: 'column' }}>
                                 <ExpandLessIcon
                                   sx={{
                                     fontSize: 18,
@@ -681,14 +646,14 @@ export const ExpensesPage = () => {
                 <TableBody>
                   {loading.fetchData ? (
                     <TableRow>
-                      <TableCell colSpan={columns.length} align="center">
-                        <CircularProgress />
-                        <Typography>Loading...</Typography>
+                      <TableCell colSpan={columns.length} align="center" sx={{ py: 6 }}>
+                        <CircularProgress size={32} />
+                        <Typography mt={1}>Memuat data...</Typography>
                       </TableCell>
                     </TableRow>
-                  ) : filteredData.length > 0 ? (
+                  ) : data.length > 0 ? (
                     table.getRowModel().rows.map((row) => (
-                      <TableRow key={row.id}>
+                      <TableRow key={row.id} hover>
                         {row.getVisibleCells().map((cell) => (
                           <TableCell key={cell.id}>
                             {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -698,8 +663,8 @@ export const ExpensesPage = () => {
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={columns.length} align="center">
-                        <Typography>No data available</Typography>
+                      <TableCell colSpan={columns.length} align="center" sx={{ py: 6 }}>
+                        <Typography color="text.secondary">Tidak ada data</Typography>
                       </TableCell>
                     </TableRow>
                   )}
@@ -708,7 +673,7 @@ export const ExpensesPage = () => {
             </TableContainer>
             <Divider />
 
-            {/* Pagination Section */}
+            {/* Pagination */}
             <Stack
               gap={1}
               p={3}
@@ -716,46 +681,59 @@ export const ExpensesPage = () => {
               direction={{ xs: 'column', sm: 'row' }}
               justifyContent="space-between"
             >
-              <Typography variant="body1">{totalCount} Rows</Typography>
+              <Typography variant="body1" color="textPrimary">
+                {totalCount} Rows
+              </Typography>
 
               <Stack direction="row" alignItems="center" gap={1}>
-                <IconButton size="small" onClick={() => setPage(1)} disabled={page === 1}>
+                <IconButton
+                  size="small"
+                  onClick={() => setPageParams((prev) => ({ ...prev, page: 1 }))}
+                  disabled={page === 1}
+                >
                   <IconChevronsLeft />
                 </IconButton>
                 <IconButton
                   size="small"
-                  onClick={() => setPage((prev) => prev - 1)}
+                  onClick={() => setPageParams((prev) => ({ ...prev, page: prev.page - 1 }))}
                   disabled={page === 1}
                 >
                   <IconChevronLeft />
                 </IconButton>
-                <Typography>
+                <Typography variant="body1" color="textPrimary">
                   Page {page} of {pageCount || 1}
                 </Typography>
                 <IconButton
                   size="small"
-                  onClick={() => setPage((prev) => prev + 1)}
-                  disabled={page === pageCount}
+                  onClick={() => setPageParams((prev) => ({ ...prev, page: prev.page + 1 }))}
+                  disabled={page >= pageCount}
                 >
                   <IconChevronRight />
                 </IconButton>
                 <IconButton
                   size="small"
-                  onClick={() => setPage(pageCount)}
-                  disabled={page === pageCount}
+                  onClick={() => setPageParams((prev) => ({ ...prev, page: pageCount }))}
+                  disabled={page >= pageCount}
                 >
                   <IconChevronsRight />
                 </IconButton>
               </Stack>
 
               <Stack direction="row" alignItems="center" gap={1}>
-                <Typography>Rows per page:</Typography>
+                <Typography variant="body1" color="textPrimary">
+                  Rows per page:
+                </Typography>
                 <Select
                   value={pageSize}
-                  onChange={(e) => setPageSize(Number(e.target.value))}
-                  size="small"
+                  onChange={(e) =>
+                    setPageParams((prev) => ({
+                      ...prev,
+                      pageSize: Number(e.target.value),
+                      page: 1
+                    }))
+                  }
                 >
-                  {[10, 15, 20, 25, 50, 100, 200, 300, 400, 500].map((size) => (
+                  {[10, 15, 20, 25].map((size) => (
                     <MenuItem key={size} value={size}>
                       {size}
                     </MenuItem>
@@ -764,35 +742,32 @@ export const ExpensesPage = () => {
               </Stack>
             </Stack>
           </Paper>
-
-          {/* Image Preview Dialog */}
-          <Dialog open={openPreview} onClose={() => setOpenPreview(false)} maxWidth="md" fullWidth>
-            <DialogContent>
-              <img src={previewImageUrl} alt="Preview" style={{ width: '100%', height: 'auto' }} />
-            </DialogContent>
-            <DialogActions>
-              <Button onClick={() => setOpenPreview(false)} color="primary">
-                Close
-              </Button>
-            </DialogActions>
-          </Dialog>
         </Grid>
       </Grid>
 
-      {/* ========== CREATE EXPENSE MODAL ========== */}
+      {/* Image Preview Dialog */}
+      <Dialog open={openPreview} onClose={() => setOpenPreview(false)} maxWidth="md" fullWidth>
+        <DialogContent>
+          <img src={previewImageUrl} alt="Preview" style={{ width: '100%', height: 'auto' }} />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenPreview(false)}>Tutup</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ===== CREATE EXPENSE MODAL ===== */}
       <Dialog open={openModal} onClose={handleCloseModal} maxWidth="sm" fullWidth>
         <DialogTitle>
           <Stack direction="row" justifyContent="space-between" alignItems="center">
             <Typography variant="h6" fontWeight={600}>
               Pengeluaran Baru
             </Typography>
-            <Stack direction="row" alignItems="center" spacing={1}>
-              {isOnline ? (
-                <Chip icon={<IconWifi size={14} />} label="Online" color="success" size="small" />
-              ) : (
-                <Chip icon={<IconWifiOff size={14} />} label="Offline" color="error" size="small" />
-              )}
-            </Stack>
+            <Chip
+              icon={isOnline ? <IconWifi size={14} /> : <IconWifiOff size={14} />}
+              label={isOnline ? 'Online' : 'Offline'}
+              color={isOnline ? 'success' : 'error'}
+              size="small"
+            />
           </Stack>
         </DialogTitle>
         <DialogContent dividers>
@@ -823,19 +798,16 @@ export const ExpensesPage = () => {
                     label="Kategori"
                     onChange={(e) => handleSelectChange('category_name', e.target.value)}
                   >
-                    {/* Use dynamic categories from API if available, fallback to static */}
-                    {categoryData &&
-                      categoryData.length > 0 &&
-                      categoryData.map((cat) => (
-                        <MenuItem key={cat.guid || cat.id} value={cat.name}>
-                          {cat.name}
-                        </MenuItem>
-                      ))}
+                    {categoryData.map((cat) => (
+                      <MenuItem key={cat.guid || cat.id} value={cat.name}>
+                        {cat.name}
+                      </MenuItem>
+                    ))}
                   </Select>
                 </FormControl>
               </Grid>
 
-              {/* Karyawan (Optional) */}
+              {/* Karyawan */}
               <Grid size={{ xs: 12 }}>
                 <FormControl fullWidth size="small">
                   <InputLabel>Karyawan (Opsional)</InputLabel>
@@ -849,7 +821,7 @@ export const ExpensesPage = () => {
                     <MenuItem value="">-- Tidak Ada --</MenuItem>
                     {employeeData.map((employee) => (
                       <MenuItem key={employee.guid} value={employee.guid}>
-                        {employee.employee_name}
+                        {employee.employee_name || employee.name}
                       </MenuItem>
                     ))}
                   </Select>
@@ -873,7 +845,7 @@ export const ExpensesPage = () => {
                 />
               </Grid>
 
-              {/* Deskripsi / Rincian */}
+              {/* Deskripsi */}
               <Grid size={{ xs: 12 }}>
                 <TextField
                   fullWidth
@@ -889,7 +861,7 @@ export const ExpensesPage = () => {
                 />
               </Grid>
 
-              {/* Bukti / Receipt */}
+              {/* Bukti */}
               <Grid size={{ xs: 12 }}>
                 <Typography variant="body2" color="text.secondary" mb={1}>
                   Bukti Pengeluaran (Opsional)
@@ -920,11 +892,7 @@ export const ExpensesPage = () => {
                     <img
                       src={previewImage}
                       alt="Preview"
-                      style={{
-                        maxWidth: '100%',
-                        maxHeight: 150,
-                        display: 'block'
-                      }}
+                      style={{ maxWidth: '100%', maxHeight: 150, display: 'block' }}
                     />
                     <IconButton
                       onClick={handleRemoveImage}
@@ -960,23 +928,6 @@ export const ExpensesPage = () => {
           </Button>
         </DialogActions>
       </Dialog>
-
-      {/* Snackbar */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={4000}
-        onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert
-          onClose={handleCloseSnackbar}
-          severity={snackbar.severity}
-          variant="filled"
-          sx={{ width: '100%' }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
     </Box>
   )
 }

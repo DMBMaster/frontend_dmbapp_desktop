@@ -25,6 +25,7 @@ import { StockOpnamePage } from './inventoryPage/opname'
 import { CreatePurchaseOrderPage } from './inventoryPage/purchase/order/create'
 import { SupplierPage } from './inventoryPage/supplier'
 import { StockRotationPage } from './inventoryPage/stock/rotation'
+import { StockMovementPage } from './inventoryPage/stock/movement'
 
 export {
   NotFoundPage,
@@ -53,5 +54,6 @@ export {
   CreatePurchaseOrderPage,
   StockOpnamePage,
   SupplierPage,
-  StockRotationPage
+  StockRotationPage,
+  StockMovementPage
 }
