@@ -25,7 +25,8 @@ import {
   CreatePurchaseOrderPage,
   SupplierPage,
   StockRotationPage,
-  StockMovementPage
+  StockMovementPage,
+  CreateStockMovementPage
 } from '@renderer/pages'
 
 export const appRoutes = [
@@ -223,6 +224,13 @@ export const appRoutes = [
   {
     path: '/inventory/movement',
     element: <StockMovementPage />,
+    active: true,
+    protected: true,
+    redirectTo: '/login'
+  },
+  {
+    path: '/inventory/movement/create',
+    element: <CreateStockMovementPage />,
     active: true,
     protected: true,
     redirectTo: '/login'

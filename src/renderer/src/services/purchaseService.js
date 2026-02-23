@@ -82,6 +82,17 @@ const PurchaseService = () => {
     }
   }
 
+  const createStockMovement = async (data) => {
+    try {
+      const res = await axiosInstance.post('/product-service/stock-transaction-move', data)
+      const responseData = res.data
+      return responseData
+    } catch (error) {
+      console.warn('⚠️ API failed → Loading stock movement from cache')
+      throw error
+    }
+  }
+
   const getStockRotation = async (params) => {
     try {
       const res = await axiosInstance.get('product-service/stock-transaction/daftar-stock', {
@@ -185,7 +196,8 @@ const PurchaseService = () => {
     createPurchaseOrder,
     getStockRotation,
     exportStockRotation,
-    getStockMovement
+    getStockMovement,
+    createStockMovement
   }
 }
 

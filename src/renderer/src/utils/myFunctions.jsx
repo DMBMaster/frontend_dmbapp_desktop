@@ -168,6 +168,13 @@ export const generatePONumber = () => {
   return `${prefix}-${datePart}-${randomPart}`
 }
 
+export const generateMoveNumber = () => {
+  const prefix = 'M'
+  const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, '') // e.g., "20241105"
+  const randomPart = Math.floor(1000 + Math.random() * 9000) // Random 4-digit number
+  return `${prefix}-${datePart}-${randomPart}`
+}
+
 export const getFirstDayOfCurrentMonth = () => {
   const date = new Date(today.getFullYear(), today.getMonth(), 1)
   return formatDate(date)
