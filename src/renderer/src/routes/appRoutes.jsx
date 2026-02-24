@@ -26,7 +26,8 @@ import {
   SupplierPage,
   StockRotationPage,
   StockMovementPage,
-  CreateStockMovementPage
+  CreateStockMovementPage,
+  ProductCategoryPage
 } from '@renderer/pages'
 
 export const appRoutes = [
@@ -127,6 +128,13 @@ export const appRoutes = [
   {
     path: '/product/detail/:id',
     element: <DetailProductPage />,
+    active: true,
+    protected: true,
+    redirectTo: '/login'
+  },
+  {
+    path: '/product/category',
+    element: <ProductCategoryPage />,
     active: true,
     protected: true,
     redirectTo: '/login'

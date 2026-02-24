@@ -63,7 +63,31 @@ const ProductCategoryService = () => {
     }
   }
 
-  const getCategoriesByOutlet = async (outletId) => {
+  const createCategories = async (data) => {
+    try {
+      const res = await axiosInstance.post('/product-service/category', data)
+      const responseData = res.data
+
+      return responseData
+    } catch (error) {
+      console.error('Error creating category:', error)
+      throw error
+    }
+  }
+
+  const updateCategories = async (id, data) => {
+    try {
+      const res = await axiosInstance.put(`/product-service/category/${id}`, data)
+      const responseData = res.data
+
+      return responseData
+    } catch (error) {
+      console.error('Error updating category:', error)
+      throw error
+    }
+  }
+
+  const getCategoriesByOutlet = async (outletId, params) => {
     const outletGuid = outletId
 
     // Check network status FIRST - skip API call if offline
@@ -74,7 +98,9 @@ const ProductCategoryService = () => {
 
     try {
       // ===== ONLINE - TRY API =====
-      const res = await axiosInstance.get(`/product-service/category/outlet/${outletId}`)
+      const res = await axiosInstance.get(`/product-service/category/outlet/${outletId}`, {
+        params
+      })
       const responseData = res.data
 
       // Cache ke Dexie (replace existing cache for this outlet)
@@ -402,6 +428,8 @@ const ProductCategoryService = () => {
     createCategory,
     updateCategory,
     deleteCategory,
+    createCategories,
+    updateCategories,
     syncPendingCategories,
     getPendingCount,
     clearCache
