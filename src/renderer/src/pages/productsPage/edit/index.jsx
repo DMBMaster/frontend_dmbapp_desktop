@@ -23,17 +23,8 @@ import { getImgUrl } from '@renderer/utils/myFunctions'
 
 export const EditProductPage = () => {
   const isOnline = useNetworkStore((state) => state.isOnline)
-  const {
-    categories,
-    units,
-    loading,
-    handleChange,
-    handleSubmit,
-    formData,
-    setFormData,
-    formOption,
-    setFormOption
-  } = UseEditProduct()
+  const { categories, units, loading, handleChange, handleSubmit, formData, setFormData } =
+    UseEditProduct()
 
   const [, setUploadImage] = useState(null)
 
@@ -200,7 +191,7 @@ export const EditProductPage = () => {
                   />
 
                   {/* Harga DMB (conditional) */}
-                  {formOption.isDMBEnabled && (
+                  {formData.app && (
                     <>
                       <Typography variant="subtitle1" fontWeight={600} mt={2} mb={1}>
                         Harga DMB
@@ -218,7 +209,7 @@ export const EditProductPage = () => {
                   )}
 
                   {/* Stok (conditional) */}
-                  {!formOption.isInventory && (
+                  {!formData.is_inventory && (
                     <>
                       <Typography variant="subtitle1" fontWeight={600} mt={2} mb={1}>
                         Stok
@@ -324,9 +315,9 @@ export const EditProductPage = () => {
                     <FormControlLabel
                       control={
                         <CustomSwitch
-                          checked={formOption.inStore}
+                          checked={formData.instore}
                           onChange={(e) =>
-                            setFormOption((prev) => ({ ...prev, inStore: e.target.checked }))
+                            setFormData((prev) => ({ ...prev, instore: e.target.checked }))
                           }
                         />
                       }
@@ -335,9 +326,9 @@ export const EditProductPage = () => {
                     <FormControlLabel
                       control={
                         <CustomSwitch
-                          checked={formOption.bookingEngine}
+                          checked={formData.is_book_engine}
                           onChange={(e) =>
-                            setFormOption((prev) => ({ ...prev, bookingEngine: e.target.checked }))
+                            setFormData((prev) => ({ ...prev, is_book_engine: e.target.checked }))
                           }
                         />
                       }
@@ -346,9 +337,9 @@ export const EditProductPage = () => {
                     <FormControlLabel
                       control={
                         <CustomSwitch
-                          checked={formOption.miniBar}
+                          checked={formData.is_minibar}
                           onChange={(e) =>
-                            setFormOption((prev) => ({ ...prev, miniBar: e.target.checked }))
+                            setFormData((prev) => ({ ...prev, is_minibar: e.target.checked }))
                           }
                         />
                       }
@@ -357,9 +348,9 @@ export const EditProductPage = () => {
                     <FormControlLabel
                       control={
                         <CustomSwitch
-                          checked={formOption.isDMBEnabled}
+                          checked={formData.app}
                           onChange={(e) =>
-                            setFormOption((prev) => ({ ...prev, isDMBEnabled: e.target.checked }))
+                            setFormData((prev) => ({ ...prev, app: e.target.checked }))
                           }
                         />
                       }
@@ -379,9 +370,9 @@ export const EditProductPage = () => {
                     <FormControlLabel
                       control={
                         <CustomSwitch
-                          checked={formOption.isInventory}
+                          checked={formData.is_inventory}
                           onChange={(e) =>
-                            setFormOption((prev) => ({ ...prev, isInventory: e.target.checked }))
+                            setFormData((prev) => ({ ...prev, is_inventory: e.target.checked }))
                           }
                         />
                       }
@@ -390,9 +381,9 @@ export const EditProductPage = () => {
                     <FormControlLabel
                       control={
                         <CustomSwitch
-                          checked={formOption.sale}
+                          checked={formData.sale}
                           onChange={(e) =>
-                            setFormOption((prev) => ({ ...prev, sale: e.target.checked }))
+                            setFormData((prev) => ({ ...prev, sale: e.target.checked }))
                           }
                         />
                       }

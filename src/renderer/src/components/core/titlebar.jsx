@@ -42,6 +42,7 @@ import { useNetworkStore, initNetworkListeners } from '@renderer/store/networkSt
 import { localdb } from '@renderer/config/localdb'
 import { useConfigStore } from '@renderer/store/configProvider'
 import { useNavigate } from 'react-router-dom'
+import { IconReload } from '@tabler/icons-react'
 
 // eslint-disable-next-line react/prop-types
 export const TitleBar = ({ username, theme = 'light', onLogout, showUpdateButton = false }) => {
@@ -142,7 +143,6 @@ export const TitleBar = ({ username, theme = 'light', onLogout, showUpdateButton
       if (key === 'f' && altKey) e.preventDefault()
       if (key === 'F11') e.preventDefault()
       if ((key === 'r' || key === 'R') && ctrlKey) {
-        e.preventDefault()
         window.location.reload()
       }
       if (key === 'i' && ctrlKey) {
@@ -211,6 +211,9 @@ export const TitleBar = ({ username, theme = 'light', onLogout, showUpdateButton
       if (e.key === 'F12') {
         e.preventDefault()
         setOpenDeviceDialog((prev) => !prev)
+      }
+      if ((e.key === 'r' || e.key === 'R') && e.ctrlKey) {
+        window.location.reload()
       }
     }
     window.addEventListener('keydown', handleKeyDown)
@@ -819,6 +822,12 @@ export const TitleBar = ({ username, theme = 'light', onLogout, showUpdateButton
         )}
 
         {/* Menu Items */}
+        <MenuItem onClick={() => window.location.reload()} sx={{ py: 1.5 }}>
+          <ListItemIcon>
+            <IconReload fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Refresh</ListItemText>
+        </MenuItem>
         <MenuItem onClick={handleSettings} sx={{ py: 1.5 }}>
           <ListItemIcon>
             <Settings fontSize="small" />

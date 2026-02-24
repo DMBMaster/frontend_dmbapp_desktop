@@ -15,35 +15,26 @@ export const UseEditProduct = () => {
   const productCategoryService = ProductCategoryService()
 
   const [formData, setFormData] = useState({
-    category_id: '',
-    description: '',
-    product_code: '',
     product_name: '',
-    price: '',
-    price_walkin: '',
-    stock: '',
-    published: '',
-    status: '',
-    images: '',
-    base_price: '',
+    product_code: '',
+    description: '',
+    price: 0,
+    category_id: '',
+    stock: 0,
+    published: true,
+    status: 1,
+    price_walkin: 0,
+    base_price: 0,
+    images: null,
     satuan_id: '',
-    is_book_engine: '',
-    is_minibar: '',
-    app: '',
-    is_inventory: '',
-    sale: '',
-    instore: '',
-    outlet_id: ''
+    is_book_engine: false,
+    is_minibar: false,
+    app: false,
+    is_inventory: false,
+    instore: true,
+    sale: true
   })
 
-  const [formOption, setFormOption] = useState({
-    inStore: true,
-    bookingEngine: false,
-    miniBar: false,
-    isDMBEnabled: false,
-    isInventory: false,
-    sale: false
-  })
   const [categories, setCategories] = useState([])
   const [selectedCategory, setSelectedCategory] = useState(null)
   const [units, setUnits] = useState([])
@@ -80,7 +71,7 @@ export const UseEditProduct = () => {
           images: product.images,
           price_walkin: product.price_walkin,
           base_price: product.base_price,
-          satuan_id: product.satuan_detail.id,
+          satuan_id: product.satuan_detail.id, // Assuming satuan_id is the same as the satuan field
           is_book_engine: product.is_book_engine,
           is_minibar: product.is_minibar,
           app: product.app,
@@ -130,12 +121,12 @@ export const UseEditProduct = () => {
       const payload = {
         category_id: formData?.category_id || '',
         satuan_id: formData?.satuan_id || '',
-        is_book_engine: formOption.bookingEngine,
-        is_minibar: formOption.miniBar,
-        app: formOption.isDMBEnabled,
-        is_inventory: formOption.isInventory,
-        sale: formOption.sale,
-        instore: formOption.inStore,
+        is_book_engine: formData?.is_book_engine || false,
+        is_minibar: formData?.is_minibar || false,
+        app: formData?.app || false,
+        is_inventory: formData?.is_inventory || false,
+        sale: formData?.sale || false,
+        instore: formData?.instore || false,
         outlet_id: localStorage.getItem('outletGuid'),
         price: parseFloat(formData.price) || 0,
         price_walkin: parseFloat(formData.price_walkin) || 0,
@@ -220,8 +211,6 @@ export const UseEditProduct = () => {
     handleSubmit,
     setFormData,
     formData,
-    formOption,
-    setFormOption,
     selectedCategory,
     setSelectedCategory,
     selectedUnit,
