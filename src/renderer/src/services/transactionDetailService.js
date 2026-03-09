@@ -629,6 +629,18 @@ const TransactionDetailService = () => {
     }
   }
 
+  const getRoomsActivity = async (params) => {
+    try {
+      const response = await axiosInstance.get(`/product-service/room-activity`, { params })
+      const responseData = response.data
+
+      return responseData
+    } catch (error) {
+      console.log('getRoomsActivity', error)
+      console.warn('⚠️ API failed → Loading rooms from cache')
+    }
+  }
+
   // Helper: Get rooms by product from cache
   const getRoomsByProductFromCache = async (outletGuid, productId, originalError) => {
     const cached = await localdb.rooms.where({ outlet_guid: outletGuid }).toArray()
@@ -977,21 +989,15 @@ const TransactionDetailService = () => {
 
     const items = allPendingItems.filter(
       (p) =>
-        p.outlet_guid === outletGuid &&
-        p.synced === false &&
-        p.entity_type?.startsWith('detail_')
+        p.outlet_guid === outletGuid && p.synced === false && p.entity_type?.startsWith('detail_')
     ).length
     const payments = allPendingPayments.filter(
       (p) =>
-        p.outlet_guid === outletGuid &&
-        p.synced === false &&
-        p.entity_type === 'detail_payment'
+        p.outlet_guid === outletGuid && p.synced === false && p.entity_type === 'detail_payment'
     ).length
     const deletes = allPendingDeletes.filter(
       (p) =>
-        p.outlet_guid === outletGuid &&
-        p.synced === false &&
-        p.entity_type === 'transaction_item'
+        p.outlet_guid === outletGuid && p.synced === false && p.entity_type === 'transaction_item'
     ).length
 
     return items + payments + deletes
@@ -1034,6 +1040,7 @@ const TransactionDetailService = () => {
     openPaymentPopup,
     syncPendingDetailData,
     getPendingCount,
+    getRoomsActivity,
     clearCache
   }
 }

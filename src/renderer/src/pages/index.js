@@ -28,6 +28,9 @@ import { StockRotationPage } from './inventoryPage/stock/rotation'
 import { StockMovementPage } from './inventoryPage/stock/movement'
 import { CreateStockMovementPage } from './inventoryPage/stock/movement/create'
 import { ProductCategoryPage } from './productsPage/category'
+import { TransactionActivityPage } from './otherPage/transactionActivity'
+import { RoomActivityPage } from './settingPage/room/activity'
+import { UnitPage } from './otherPage/satuan'
 
 export {
   NotFoundPage,
@@ -59,5 +62,8 @@ export {
   StockRotationPage,
   StockMovementPage,
   CreateStockMovementPage,
-  ProductCategoryPage
+  ProductCategoryPage,
+  TransactionActivityPage,
+  RoomActivityPage,
+  UnitPage
 }

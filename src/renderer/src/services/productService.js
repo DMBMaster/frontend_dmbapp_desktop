@@ -206,6 +206,39 @@ const ProductService = () => {
     }
   }
 
+  const createUnitsProducts = async (data) => {
+    try {
+      const response = await axiosInstance.post('/product-service/satuan', data)
+      const responseData = response.data
+      return responseData
+    } catch (error) {
+      console.log('createUnitsProducts:', error)
+      console.warn('⚠️ API failed → Loading units from cache')
+    }
+  }
+
+  const updateUnitsProducts = async (id, data) => {
+    try {
+      const response = await axiosInstance.put(`/product-service/satuan/${id}`, data)
+      const responseData = response.data
+      return responseData
+    } catch (error) {
+      console.log('updateUnitsProducts:', error)
+      console.warn('⚠️ API failed → Loading units from cache')
+    }
+  }
+
+  const deleteUnitsProducts = async (id) => {
+    try {
+      const response = await axiosInstance.delete(`/product-service/satuan/${id}`)
+      const responseData = response.data
+      return responseData
+    } catch (error) {
+      console.log('deleteUnitsProducts:', error)
+      console.warn('⚠️ API failed → Loading units from cache')
+    }
+  }
+
   const getMultiSatuanProducts = async (params) => {
     try {
       const response = await axiosInstance.get(`/product-service/product-satuan`, { params })
@@ -488,7 +521,10 @@ const ProductService = () => {
     createProductPriceLevel,
     deleteProductPriceLevel,
     createStockProduction,
-    updateStockProduction
+    updateStockProduction,
+    createUnitsProducts,
+    updateUnitsProducts,
+    deleteUnitsProducts
   }
 }
 

@@ -27,7 +27,10 @@ import {
   StockRotationPage,
   StockMovementPage,
   CreateStockMovementPage,
-  ProductCategoryPage
+  ProductCategoryPage,
+  TransactionActivityPage,
+  RoomActivityPage,
+  UnitPage
 } from '@renderer/pages'
 
 export const appRoutes = [
@@ -242,8 +245,36 @@ export const appRoutes = [
     active: true,
     protected: true,
     redirectTo: '/login'
-  }
+  },
+  // #endregion
+
+  // #region - SETTING
+  {
+    path: '/setting/rooms/activity',
+    element: <RoomActivityPage />,
+    active: true,
+    protected: true,
+    redirectTo: '/login'
+  },
 
   // #endregion
+
+  // #region - OTHER
+  {
+    path: '/other/transaction/activity',
+    element: <TransactionActivityPage />,
+    active: true,
+    protected: true,
+    redirectTo: '/login'
+  },
+  {
+    path: '/other/satuan',
+    element: <UnitPage />,
+    active: true,
+    protected: true,
+    redirectTo: '/login'
+  }
+  // #endregion
+
   // { path: '*', element: <NotFoundPage />, active: true, protected: false }
 ]

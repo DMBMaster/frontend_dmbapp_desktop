@@ -1,6 +1,6 @@
 {
   "name": "satudmb-desktopapp-new",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "An Electron application with React",
   "main": "./out/main/index.js",
   "author": "example.com",
@@ -72,7 +72,7 @@
     "vite": "^7.2.6"
   },
   "build": {
-    "productName": "SatuDMB",
+    "productName": "DMB Satu",
     "appId": "com.satudmb.desktop",
     "asar": true,
     "publish": [

@@ -164,7 +164,9 @@ const TransactionService = () => {
 
     try {
       // ===== ONLINE - TRY API =====
-      const res = await axiosInstance.get('/trx-service/merchant/outlet/transactions-v2', { params })
+      const res = await axiosInstance.get('/trx-service/merchant/outlet/transactions-v2', {
+        params
+      })
       const responseData = res.data
 
       // Cache ke Dexie (replace existing cache for this outlet)
@@ -185,6 +187,18 @@ const TransactionService = () => {
       // API call failed - try cache
       console.warn('⚠️ API failed → Loading transactions v2 from cache')
       return getTransactionsV2FromCache(outletGuid, params, error)
+    }
+  }
+
+  const getTransactionActivity = async (params) => {
+    try {
+      const res = await axiosInstance.get('/trx-service/v2/transaction-activity', { params })
+      const responseData = res.data
+
+      return responseData
+    } catch (error) {
+      console.warn('⚠️ API failed → Loading transaction activity from cache')
+      throw error
     }
   }
 
@@ -360,10 +374,7 @@ const TransactionService = () => {
   // ============================
   const updateTransaction = async (guid, payload) => {
     try {
-      const res = await axiosInstance.patch(
-        `/trx-service/transaction/${guid}`,
-        payload
-      )
+      const res = await axiosInstance.patch(`/trx-service/transaction/${guid}`, payload)
       return res.data
     } catch (error) {
       console.error('Error updating transaction:', error)
@@ -381,10 +392,7 @@ const TransactionService = () => {
     }
 
     try {
-      const res = await axiosInstance.post(
-        `/trx-service/transaction-item`,
-        requestBody
-      )
+      const res = await axiosInstance.post(`/trx-service/transaction-item`, requestBody)
       return res.data
     } catch (error) {
       console.error('Error adding transaction item:', error)
@@ -427,6 +435,7 @@ const TransactionService = () => {
     updatePayment,
     updateTransaction,
     addTransactionItem,
+    getTransactionActivity,
     getPendingCount,
     clearCache
   }
