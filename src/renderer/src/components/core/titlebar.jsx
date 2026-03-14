@@ -1,6 +1,4 @@
 import React, { useEffect, useState, useCallback } from 'react'
-import Snackbar from '@mui/material/Snackbar'
-import MuiAlert from '@mui/material/Alert'
 import {
   AppBar,
   Toolbar,
@@ -28,6 +26,7 @@ import {
   CropSquare,
   Close,
   Store,
+  PointOfSale,
   Settings,
   Logout,
   KeyboardArrowDown,
@@ -43,10 +42,15 @@ import { localdb } from '@renderer/config/localdb'
 import { useConfigStore } from '@renderer/store/configProvider'
 import { useNavigate } from 'react-router-dom'
 import { IconReload } from '@tabler/icons-react'
+import { formatRupiah } from '@renderer/utils/myFunctions'
+import ConfigService from '@renderer/services/configService'
+import { useNotifier } from './NotificationProvider'
 
 // eslint-disable-next-line react/prop-types
 export const TitleBar = ({ username, theme = 'light', onLogout, showUpdateButton = false }) => {
   const navigate = useNavigate()
+  const configService = ConfigService()
+  const notifier = useNotifier()
 
   const { config } = useConfigStore.getState()
   // OUTLET LOGIC
@@ -80,7 +84,17 @@ export const TitleBar = ({ username, theme = 'light', onLogout, showUpdateButton
   const [userEmail, setUserEmail] = useState('')
   const [userRole, setUserRole] = useState('')
   const [openCloseDialog, setOpenCloseDialog] = useState(false)
+  const [openCashierDialog, setOpenCashierDialog] = useState(false)
+  const [openCloseCashierDialog, setOpenCloseCashierDialog] = useState(false)
+  const [openCloseCashierPinDialog, setOpenCloseCashierPinDialog] = useState(false)
   const [openDeviceDialog, setOpenDeviceDialog] = useState(false)
+  const [openingBalance, setOpeningBalance] = useState('0')
+  const [cashierPin, setCashierPin] = useState('')
+  const [closeCashierPin, setCloseCashierPin] = useState('')
+  const [cashierSession, setCashierSession] = useState(null)
+  const [isCheckingCashierSession, setIsCheckingCashierSession] = useState(false)
+  const [isOpeningCashier, setIsOpeningCashier] = useState(false)
+  const [isClosingCashier, setIsClosingCashier] = useState(false)
   const [openedProgress, setOpenedProgress] = useState(false)
   const [downloadProgress, setDownloadProgress] = useState(0)
 
@@ -99,15 +113,90 @@ export const TitleBar = ({ username, theme = 'light', onLogout, showUpdateButton
   )
 
   // Snackbar untuk update info
-  const [updateInfoOpen, setUpdateInfoOpen] = useState(false)
-  const [updateInfoMsg, setUpdateInfoMsg] = useState('')
-  const [updateInfoSeverity, setUpdateInfoSeverity] = useState(
-    'success' | 'warning' | 'error' | 'info'
-  )
+  const showNotification = (message, severity = 'info', description = '') => {
+    notifier.show({
+      message,
+      severity,
+      ...(description ? { description } : {})
+    })
+  }
+
+  const getCurrentUserId = () => localStorage.getItem('userId') || user?.user?.uid || ''
+
+  const mapSessionData = (response) => {
+    if (!response || typeof response !== 'object') return null
+
+    if (response.message === 404) return null
+    if (typeof response.data === 'string' && response.data.toLowerCase().includes('not found')) {
+      return null
+    }
+
+    if (response?.data?.is_open && response?.data?.outlet_session) {
+      return response.data.outlet_session
+    }
+
+    return null
+  }
+
+  const formatSessionDate = (dateValue) => {
+    if (!dateValue) return '-'
+
+    const rawDate = typeof dateValue === 'object' ? dateValue.date : dateValue
+    if (!rawDate) return '-'
+
+    const normalized = rawDate.replace(' ', 'T').split('.')[0]
+    const parsedDate = new Date(normalized)
+    if (Number.isNaN(parsedDate.getTime())) return '-'
+
+    return new Intl.DateTimeFormat('id-ID', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    }).format(parsedDate)
+  }
+
+  const formatMoney = (value) => `Rp ${formatRupiah(String(Number(value) || 0), 0)}`
+
+  const handleCheckSessionCashier = async ({ silent = false } = {}) => {
+    try {
+      const outletGuid = localStorage.getItem('outletGuid')
+      const userId = getCurrentUserId()
+
+      if (!outletGuid || !userId) {
+        setCashierSession(null)
+        return null
+      }
+
+      setIsCheckingCashierSession(true)
+      const response = await configService.checkSessionCashier(outletGuid, userId)
+      const activeSession = mapSessionData(response)
+      setCashierSession(activeSession)
+      return activeSession
+    } catch (error) {
+      setCashierSession(null)
+      if (!silent) {
+        notifier.show({
+          message: 'Terjadi Kesalahan',
+          description:
+            error?.response?.data?.message || error.message || 'Gagal memeriksa sesi kasir',
+          severity: 'error'
+        })
+      }
+      console.error('Failed to check cashier session', error)
+      return null
+    } finally {
+      setIsCheckingCashierSession(false)
+    }
+  }
 
   React.useEffect(() => {
     try {
       if (userStr && user) {
+        // Check cashier session immediately after login context is available.
+        handleCheckSessionCashier({ silent: true })
         setOutlets(user.outlets || [])
         setUserEmail(user.user.email || '')
         setUserRole('User')
@@ -191,8 +280,6 @@ export const TitleBar = ({ username, theme = 'light', onLogout, showUpdateButton
   const getDeviceInfo = async () => {
     try {
       const res = await window.api.device.deviceInfo()
-      console.log(res)
-
       setDeviceInfo(res)
     } catch (error) {
       console.error('Failed to get device info', error)
@@ -282,29 +369,23 @@ export const TitleBar = ({ username, theme = 'light', onLogout, showUpdateButton
 
     // Subscribe to update notifications
     const unsubNotification = window.api.onUpdateNotification((message, severity) => {
-      setUpdateInfoMsg(message)
-      setUpdateInfoSeverity(severity)
-      setUpdateInfoOpen(true)
+      notifier.show({ message, severity })
     })
 
     return () => {
       unsubProgress()
       unsubNotification()
     }
-  }, [])
+  }, [notifier])
 
   const handleCheckUpdates = () => {
     try {
-      setUpdateInfoMsg('Memeriksa pembaruan...')
-      setUpdateInfoSeverity('info')
-      setUpdateInfoOpen(true)
+      showNotification('Memeriksa pembaruan...', 'info')
 
       window.api.checkForUpdates()
     } catch (e) {
       console.error('Failed to request update check', e)
-      setUpdateInfoMsg('Gagal memeriksa pembaruan')
-      setUpdateInfoSeverity('error')
-      setUpdateInfoOpen(true)
+      showNotification('Gagal memeriksa pembaruan', 'error')
     }
   }
 
@@ -328,6 +409,126 @@ export const TitleBar = ({ username, theme = 'light', onLogout, showUpdateButton
   const handleCloseCancel = () => {
     setOpenCloseDialog(false)
   }
+
+  const handleOpenCashierDialog = async () => {
+    const activeSession = await handleCheckSessionCashier()
+
+    if (activeSession) {
+      setOpenCloseCashierDialog(true)
+      return
+    }
+
+    setOpenCashierDialog(true)
+  }
+
+  const handleCloseCashierDialog = () => {
+    setOpenCashierDialog(false)
+    setCashierPin('')
+  }
+
+  const handleCloseCashierReportDialog = () => {
+    setOpenCloseCashierDialog(false)
+  }
+
+  const handleOpenCloseCashierPinDialog = () => {
+    setOpenCloseCashierPinDialog(true)
+  }
+
+  const handleCloseCloseCashierPinDialog = () => {
+    setOpenCloseCashierPinDialog(false)
+    setCloseCashierPin('')
+  }
+
+  const handleSubmitOpenCashier = async () => {
+    const parsedBalance = Number(openingBalance)
+    const safePin = cashierPin.trim()
+
+    if (!Number.isFinite(parsedBalance) || parsedBalance < 0) {
+      showNotification('Saldo awal tidak valid', 'warning')
+      return
+    }
+
+    if (!safePin) {
+      showNotification('PIN wajib diisi', 'warning')
+      return
+    }
+
+    try {
+      setIsOpeningCashier(true)
+
+      const payload = {
+        pin: safePin,
+        outlet_id: localStorage.getItem('outletGuid') || '',
+        cash_first: parsedBalance,
+        user_id: localStorage.getItem('userId') || ''
+      }
+
+      await configService.openCashier(payload)
+      setCashierPin('')
+      setOpenCashierDialog(false)
+      showNotification('Kasir berhasil dibuka', 'success')
+
+      // Ensure state in title bar remains synced with server.
+      await handleCheckSessionCashier({ silent: true })
+    } catch (error) {
+      console.error('Failed to open cashier', error)
+      showNotification(
+        error?.response?.data?.message || error?.message || 'Gagal membuka kasir',
+        'error'
+      )
+    } finally {
+      setIsOpeningCashier(false)
+    }
+  }
+
+  const handleSubmitCloseCashier = async () => {
+    const safePin = closeCashierPin.trim()
+
+    if (!safePin) {
+      showNotification('PIN wajib diisi untuk tutup kasir', 'warning')
+      return
+    }
+
+    try {
+      setIsClosingCashier(true)
+
+      const payload = {
+        pin: safePin,
+        outlet_id: localStorage.getItem('outletGuid') || ''
+      }
+
+      const response = await configService.closeCashier(payload)
+      const closedSession = response?.data || null
+
+      if (!closedSession?.closed_time) {
+        throw new Error(response?.message || 'Respon tutup kasir tidak valid')
+      }
+
+      // Session is closed in backend, reset local UI state.
+      setCashierSession(null)
+      setCloseCashierPin('')
+      setOpenCloseCashierPinDialog(false)
+      setOpenCloseCashierDialog(false)
+
+      showNotification('Kasir berhasil ditutup', 'success')
+
+      // Refresh session state from server to keep button state in sync.
+      await handleCheckSessionCashier({ silent: true })
+    } catch (error) {
+      console.error('Failed to close cashier', error)
+      showNotification(
+        error?.response?.data?.message || error?.message || 'Gagal menutup kasir',
+        'error'
+      )
+    } finally {
+      setIsClosingCashier(false)
+    }
+  }
+
+  const cashFirst = Number(cashierSession?.cash_first || 0)
+  const cashIn = Number(cashierSession?.cash_in || 0)
+  const cashEnd = Number(cashierSession?.cash_end || cashFirst + cashIn)
+  const unpaidTransaction = Number(cashierSession?.unpaid_transaction || 0)
 
   // Get initials from username
   const getInitials = (name) => {
@@ -415,16 +616,12 @@ export const TitleBar = ({ username, theme = 'light', onLogout, showUpdateButton
 
   useEffect(() => {
     const testAndPrint = async () => {
-      console.log('printt')
-
       try {
         // 1. Test koneksi dulu
         const testResult = await window.api.testThermalPrinter({
           printerIp: config.printer_ip,
           printerPort: config.printer_port
         })
-        console.log('Koneksi printer:', testResult)
-
         if (!testResult.connected) {
           console.error('Printer tidak terhubung:', testResult.error)
           return
@@ -517,6 +714,40 @@ export const TitleBar = ({ username, theme = 'light', onLogout, showUpdateButton
                 </Typography>
               </Box>
             )}
+
+            <Button
+              size="small"
+              variant="contained"
+              startIcon={<PointOfSale fontSize="small" />}
+              onClick={handleOpenCashierDialog}
+              disabled={isCheckingCashierSession}
+              sx={{
+                minHeight: 26,
+                px: 1.2,
+                py: 0.25,
+                borderRadius: 2,
+                textTransform: 'none',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                color: 'white',
+                bgcolor: cashierSession ? '#C24B4B' : '#2E9E6F',
+                WebkitAppRegion: 'no-drag',
+                transition: 'background-color 0.2s ease',
+                '&.Mui-disabled': {
+                  bgcolor: 'rgba(255,255,255,0.25)',
+                  color: 'rgba(255,255,255,0.85)'
+                },
+                '&:hover': {
+                  bgcolor: cashierSession ? '#AF3E3E' : '#278A61'
+                }
+              }}
+            >
+              {isCheckingCashierSession
+                ? 'Memeriksa...'
+                : cashierSession
+                  ? 'Tutup Kasir'
+                  : 'Buka Kasir'}
+            </Button>
 
             {/* Network Status Indicator */}
             <Tooltip title={isOnline ? 'Online' : 'Offline - Data disimpan lokal'} arrow>
@@ -916,6 +1147,297 @@ export const TitleBar = ({ username, theme = 'light', onLogout, showUpdateButton
       </Dialog>
 
       <Dialog
+        open={openCashierDialog}
+        onClose={handleCloseCashierDialog}
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            minWidth: 520,
+            maxWidth: '92vw'
+          }
+        }}
+      >
+        <DialogTitle sx={{ pb: 2.5, pt: 3 }}>
+          <Box display="flex" alignItems="flex-start" justifyContent="space-between" gap={2}>
+            <Box>
+              <Typography
+                variant="h4"
+                sx={{ fontWeight: 700, fontSize: '1.25rem', lineHeight: 1.2 }}
+              >
+                Buka Kasir - {username || '-'}
+              </Typography>
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{ mt: 1.5, fontSize: '0.8rem' }}
+              >
+                Masukkan Saldo Awal &amp; PIN untuk Buka Kasir
+              </Typography>
+            </Box>
+            <IconButton onClick={handleCloseCashierDialog}>
+              <Close />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+
+        <DialogContent sx={{ pb: 1 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <TextField
+              fullWidth
+              label="Saldo Awal"
+              value={formatRupiah(openingBalance, 0)}
+              onChange={(e) => {
+                const onlyNumber = e.target.value.replace(/\D/g, '')
+
+                if (onlyNumber === '') {
+                  setOpeningBalance('0')
+                  return
+                }
+
+                // Prevent leading zero while typing (e.g. 01000 -> 1000)
+                const normalizedNumber = onlyNumber.replace(/^0+(?=\d)/, '')
+                setOpeningBalance(normalizedNumber)
+              }}
+              onKeyPress={(event) => {
+                if (!/[0-9]/.test(event.key)) event.preventDefault()
+              }}
+              sx={{ marginTop: 1 }}
+              InputProps={{
+                sx: {
+                  borderRadius: 2,
+                  fontSize: '1.25rem',
+                  fontWeight: 500
+                }
+              }}
+            />
+
+            <TextField
+              fullWidth
+              label="PIN"
+              type="password"
+              value={cashierPin}
+              onChange={(e) => setCashierPin(e.target.value)}
+              inputProps={{ maxLength: 12 }}
+              InputProps={{
+                sx: {
+                  borderRadius: 2,
+                  fontSize: '1.25rem',
+                  fontWeight: 500
+                }
+              }}
+            />
+          </Box>
+        </DialogContent>
+
+        <DialogActions sx={{ px: 3, pb: 3, gap: 1.5 }}>
+          <Button
+            onClick={handleSubmitOpenCashier}
+            variant="contained"
+            color="primary"
+            disabled={isOpeningCashier}
+            sx={{
+              textTransform: 'none',
+              minWidth: 180,
+              borderRadius: 2
+            }}
+          >
+            {isOpeningCashier ? 'Memproses...' : 'Buka Kasir'}
+          </Button>
+          <Button
+            onClick={handleCloseCashierDialog}
+            variant="outlined"
+            color="primary"
+            disabled={isOpeningCashier}
+            sx={{
+              textTransform: 'none',
+              minWidth: 120,
+              borderRadius: 2
+            }}
+          >
+            Batal
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={openCloseCashierDialog}
+        onClose={handleCloseCashierReportDialog}
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            minWidth: 700,
+            maxWidth: '95vw'
+          }
+        }}
+      >
+        <DialogTitle sx={{ pb: 1.5, pt: 3 }}>
+          <Box display="flex" alignItems="flex-start" justifyContent="space-between" gap={2}>
+            <Typography variant="h4" sx={{ fontWeight: 700, fontSize: '1.25rem', lineHeight: 1.2 }}>
+              Laporan Tutup Kasir - {username || '-'}
+            </Typography>
+            <IconButton onClick={handleCloseCashierReportDialog}>
+              <Close />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+
+        <DialogContent sx={{ pt: 1 }}>
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+              gap: 2,
+              mb: 4
+            }}
+          >
+            <Box>
+              <Typography variant="h6" sx={{ fontWeight: 500, fontSize: '0.95rem' }}>
+                Waktu Buka Kasir
+              </Typography>
+              <Typography variant="h5" sx={{ fontWeight: 500, fontSize: '0.95rem' }}>
+                {formatSessionDate(cashierSession?.open_time)}
+              </Typography>
+            </Box>
+            <Box sx={{ textAlign: { xs: 'left', sm: 'right' } }}>
+              <Typography variant="h6" sx={{ fontWeight: 500, fontSize: '0.95rem' }}>
+                Waktu Tutup Kasir
+              </Typography>
+              <Typography variant="h5" sx={{ fontWeight: 500, fontSize: '0.95rem' }}>
+                {formatSessionDate(new Date().toISOString())}
+              </Typography>
+            </Box>
+          </Box>
+
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <Box display="flex" alignItems="center" justifyContent="space-between" gap={2}>
+              <Typography variant="h5" sx={{ fontWeight: 700, fontSize: '1rem' }}>
+                Modal Awal
+              </Typography>
+              <Typography variant="h5">{formatMoney(cashFirst)}</Typography>
+            </Box>
+
+            <Box display="flex" alignItems="center" justifyContent="space-between" gap={2}>
+              <Typography variant="h5" sx={{ fontWeight: 700, fontSize: '1rem' }}>
+                Tunai
+              </Typography>
+              <Typography variant="h5">{formatMoney(cashIn)}</Typography>
+            </Box>
+
+            <Box display="flex" alignItems="center" justifyContent="space-between" gap={2}>
+              <Typography variant="h5" sx={{ fontWeight: 700, fontSize: '1rem' }}>
+                EDC
+              </Typography>
+              <Typography variant="h5">{formatMoney(cashierSession?.edc || 0)}</Typography>
+            </Box>
+
+            <Box display="flex" alignItems="center" justifyContent="space-between" gap={2}>
+              <Typography variant="h5" sx={{ fontWeight: 700, fontSize: '1rem' }}>
+                Bank Transfer
+              </Typography>
+              <Typography variant="h5">
+                {formatMoney(cashierSession?.bank_transfer || 0)}
+              </Typography>
+            </Box>
+
+            <Box display="flex" alignItems="center" justifyContent="space-between" gap={2}>
+              <Typography variant="h5" sx={{ fontWeight: 700, fontSize: '1rem' }}>
+                Saldo Akhir
+              </Typography>
+              <Typography variant="h5">{formatMoney(cashEnd)}</Typography>
+            </Box>
+
+            <Box display="flex" alignItems="center" justifyContent="space-between" gap={2}>
+              <Typography variant="h5" sx={{ fontWeight: 700, fontSize: '1rem' }}>
+                Transaksi Belum Terbayar
+              </Typography>
+              <Typography variant="h5">{formatMoney(unpaidTransaction)}</Typography>
+            </Box>
+          </Box>
+        </DialogContent>
+
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button
+            onClick={handleOpenCloseCashierPinDialog}
+            variant="contained"
+            color="primary"
+            sx={{
+              textTransform: 'none',
+              minWidth: 180,
+              borderRadius: 2
+            }}
+          >
+            Tutup Kasir
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={openCloseCashierPinDialog}
+        onClose={handleCloseCloseCashierPinDialog}
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            minWidth: 440,
+            maxWidth: '92vw'
+          }
+        }}
+      >
+        <DialogTitle sx={{ pb: 1.5, pt: 3 }}>
+          <Typography variant="h4" sx={{ fontWeight: 700, fontSize: '1rem' }}>
+            Masukkan PIN untuk Tutup Kasir
+          </Typography>
+        </DialogTitle>
+
+        <DialogContent>
+          <TextField
+            fullWidth
+            label="PIN"
+            type="password"
+            value={closeCashierPin}
+            onChange={(e) => setCloseCashierPin(e.target.value)}
+            inputProps={{ maxLength: 12 }}
+            sx={{ mt: 1 }}
+            InputProps={{
+              sx: {
+                borderRadius: 2,
+                fontSize: '1.25rem',
+                fontWeight: 500
+              }
+            }}
+          />
+        </DialogContent>
+
+        <DialogActions sx={{ px: 3, pb: 3, gap: 1.5 }}>
+          <Button
+            onClick={handleSubmitCloseCashier}
+            variant="contained"
+            color="primary"
+            disabled={isClosingCashier}
+            sx={{
+              textTransform: 'none',
+              minWidth: 180,
+              borderRadius: 2
+            }}
+          >
+            {isClosingCashier ? 'Memproses...' : 'Tutup Kasir'}
+          </Button>
+          <Button
+            onClick={handleCloseCloseCashierPinDialog}
+            variant="outlined"
+            color="primary"
+            disabled={isClosingCashier}
+            sx={{
+              textTransform: 'none',
+              minWidth: 120,
+              borderRadius: 2
+            }}
+          >
+            Batal
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
         open={openedProgress}
         onClose={() => setOpenedProgress(false)}
         PaperProps={{
@@ -1080,22 +1602,6 @@ export const TitleBar = ({ username, theme = 'light', onLogout, showUpdateButton
           </Button>
         </DialogActions>
       </Dialog>
-
-      <Snackbar
-        open={updateInfoOpen}
-        autoHideDuration={3500}
-        onClose={() => setUpdateInfoOpen(false)}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-      >
-        <MuiAlert
-          elevation={6}
-          variant="filled"
-          onClose={() => setUpdateInfoOpen(false)}
-          severity={updateInfoSeverity}
-        >
-          {updateInfoMsg}
-        </MuiAlert>
-      </Snackbar>
     </>
   )
 }
