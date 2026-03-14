@@ -339,7 +339,12 @@ export const CreateTransactionPage = () => {
                           <Stack direction="row" spacing={1} alignItems="center">
                             <span>{row.product_name}</span>
                             {row._offline && (
-                              <Chip label="Offline" size="small" color="warning" variant="outlined" />
+                              <Chip
+                                label="Offline"
+                                size="small"
+                                color="warning"
+                                variant="outlined"
+                              />
                             )}
                           </Stack>
                         </TableCell>
@@ -694,6 +699,9 @@ export const CreateTransactionPage = () => {
                     fullWidth
                     label="Jumlah Bayar"
                     value={amountPaid}
+                    onKeyPress={(event) => {
+                      if (!/[0-9]/.test(event.key)) event.preventDefault()
+                    }}
                     onChange={handleAmountPaidChange}
                   />
                 </Grid>

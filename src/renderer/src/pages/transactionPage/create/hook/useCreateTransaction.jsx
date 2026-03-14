@@ -404,11 +404,10 @@ export const useCreateTransaction = () => {
   }
 
   const handleAmountPaidChange = (event) => {
-    const inputValue = event.target.value
-    const formattedValue = formatRupiah(inputValue)
+    const onlyNumber = event.target.value.replace(/\D/g, '')
+    const formattedValue = formatRupiah(onlyNumber, 0)
     const paidAmount = parseCurrencyToNumber(formattedValue)
     const changeAmount = paidAmount - finalGrandTotal
-
     setAmountPaid(formattedValue)
     setChange(changeAmount)
   }
