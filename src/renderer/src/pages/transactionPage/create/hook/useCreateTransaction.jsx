@@ -404,12 +404,23 @@ export const useCreateTransaction = () => {
   }
 
   const handleAmountPaidChange = (event) => {
-    const onlyNumber = event.target.value.replace(/\D/g, '')
-    const formattedValue = formatRupiah(onlyNumber, 0)
-    const paidAmount = parseCurrencyToNumber(formattedValue)
+    const onlyNumber = (event.target.value || '').replace(/\D/g, '')
+
+    if (onlyNumber === '') {
+      setAmountPaid('')
+      setChange(0)
+      return
+    }
+
+    const normalizedNumber = onlyNumber.replace(/^0+(?=\d)/, '')
+
+    // Keep raw numeric source for arithmetic, only format for display.
+    const paidAmount = Number(normalizedNumber || 0)
+    const formattedValue = formatRupiah(String(paidAmount), 0)
     const changeAmount = paidAmount - finalGrandTotal
+
     setAmountPaid(formattedValue)
-    setChange(changeAmount)
+    setChange(changeAmount > 0 ? changeAmount : 0)
   }
 
   const handleDiscountTypeChange = (event) => {
