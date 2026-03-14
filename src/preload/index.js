@@ -42,6 +42,14 @@ const api = {
     }
   },
 
+  onUpdateAvailability: (callback) => {
+    const handler = (_event, hasUpdate) => callback(Boolean(hasUpdate))
+    ipcRenderer.on('update:availability', handler)
+    return () => {
+      ipcRenderer.removeListener('update:availability', handler)
+    }
+  },
+
   // Network connectivity - checked from main process
   checkNetworkStatus: async () => {
     return await ipcRenderer.invoke('check-network-status')

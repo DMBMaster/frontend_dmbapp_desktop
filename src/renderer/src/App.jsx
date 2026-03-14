@@ -40,7 +40,7 @@ const ProtectedLayout = ({ children }) => {
     return <Navigate to="/login" state={{ from: location }} replace />
   }
 
-  return <>{children}</>
+  return <div>{children}</div>
 }
 
 // eslint-disable-next-line react/prop-types

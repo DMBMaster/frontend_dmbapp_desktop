@@ -32,6 +32,7 @@ import {
   RoomActivityPage,
   UnitPage
 } from '@renderer/pages'
+import { CrashTestPage } from '@renderer/pages/crashTestPage'
 
 export const appRoutes = [
   // =============== PUBLIC ROUTES ===============
@@ -273,6 +274,12 @@ export const appRoutes = [
     active: true,
     protected: true,
     redirectTo: '/login'
+  },
+  {
+    path: '/crash-test',
+    element: <CrashTestPage />,
+    protected: false,
+    active: true
   }
   // #endregion
 

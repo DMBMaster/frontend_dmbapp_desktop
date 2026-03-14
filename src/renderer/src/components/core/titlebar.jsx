@@ -47,7 +47,7 @@ import ConfigService from '@renderer/services/configService'
 import { useNotifier } from './NotificationProvider'
 
 // eslint-disable-next-line react/prop-types
-export const TitleBar = ({ username, theme = 'light', onLogout, showUpdateButton = false }) => {
+export const TitleBar = ({ username, theme = 'light', onLogout, showUpdateButton = true }) => {
   const navigate = useNavigate()
   const configService = ConfigService()
   const notifier = useNotifier()
@@ -95,6 +95,7 @@ export const TitleBar = ({ username, theme = 'light', onLogout, showUpdateButton
   const [isCheckingCashierSession, setIsCheckingCashierSession] = useState(false)
   const [isOpeningCashier, setIsOpeningCashier] = useState(false)
   const [isClosingCashier, setIsClosingCashier] = useState(false)
+  const [hasUpdateAvailable, setHasUpdateAvailable] = useState(false)
   const [openedProgress, setOpenedProgress] = useState(false)
   const [downloadProgress, setDownloadProgress] = useState(0)
 
@@ -378,6 +379,21 @@ export const TitleBar = ({ username, theme = 'light', onLogout, showUpdateButton
     }
   }, [notifier])
 
+  useEffect(() => {
+    const unsubscribe = window.api.onUpdateAvailability((hasUpdate) => {
+      setHasUpdateAvailable(hasUpdate)
+    })
+
+    return () => {
+      unsubscribe()
+    }
+  }, [])
+
+  useEffect(() => {
+    // Silent background check on app load.
+    window.api.checkForUpdates()
+  }, [])
+
   const handleCheckUpdates = () => {
     try {
       showNotification('Memeriksa pembaruan...', 'info')
@@ -387,6 +403,11 @@ export const TitleBar = ({ username, theme = 'light', onLogout, showUpdateButton
       console.error('Failed to request update check', e)
       showNotification('Gagal memeriksa pembaruan', 'error')
     }
+  }
+
+  const handleCheckUpdatesFromMenu = () => {
+    handleProfileMenuClose()
+    handleCheckUpdates()
   }
 
   const handleMinimize = () => {
@@ -789,8 +810,8 @@ export const TitleBar = ({ username, theme = 'light', onLogout, showUpdateButton
 
           {/* RIGHT - User Profile & Window Controls */}
           <Box display="flex" alignItems="center" gap={1} sx={{ WebkitAppRegion: 'no-drag' }}>
-            {/* Update button (optional) - shown when `showUpdateButton` is true */}
-            {showUpdateButton && (
+            {/* Update button is shown only when update is available */}
+            {showUpdateButton && hasUpdateAvailable && (
               <Button
                 size="small"
                 variant="outlined"
@@ -960,7 +981,7 @@ export const TitleBar = ({ username, theme = 'light', onLogout, showUpdateButton
 
         {/* Outlet Selector Section */}
         {outlets.length > 0 && (
-          <>
+          <Box>
             <Box sx={{ px: 2, py: 1 }}>
               <Typography variant="caption" color="text.secondary" fontWeight={600}>
                 PILIH OUTLET
@@ -1049,7 +1070,7 @@ export const TitleBar = ({ username, theme = 'light', onLogout, showUpdateButton
               )}
             </Box>
             <Divider sx={{ my: 1 }} />
-          </>
+          </Box>
         )}
 
         {/* Menu Items */}
@@ -1059,6 +1080,18 @@ export const TitleBar = ({ username, theme = 'light', onLogout, showUpdateButton
           </ListItemIcon>
           <ListItemText>Refresh</ListItemText>
         </MenuItem>
+        <MenuItem onClick={handleCheckUpdatesFromMenu} sx={{ py: 1.5 }}>
+          <ListItemIcon>
+            <UpdateIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Update</ListItemText>
+        </MenuItem>
+        {/* <MenuItem onClick={() => navigate('/crash-test')} sx={{ py: 1.5 }}>
+          <ListItemIcon>
+            <IconReload fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Test</ListItemText>
+        </MenuItem> */}
         <MenuItem onClick={handleSettings} sx={{ py: 1.5 }}>
           <ListItemIcon>
             <Settings fontSize="small" />

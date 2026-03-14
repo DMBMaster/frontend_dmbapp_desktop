@@ -12,7 +12,9 @@ import {
 } from './services/network.service.js'
 import { setupAutoUpdater } from './services/updater.service.js'
 import { logAppToServer } from './services/logger.service.js'
+import { initElectronCrashLogger } from './services/electronCrashLogger.service.js'
 
+initElectronCrashLogger()
 registerAppIpc()
 registerDeviceIpc()
 registerPrinterIpc()
