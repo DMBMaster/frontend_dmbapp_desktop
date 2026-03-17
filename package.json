@@ -1,6 +1,6 @@
 {
   "name": "satudmb-desktopapp-new",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "An Electron application with React",
   "main": "./out/main/index.js",
   "author": "example.com",
@@ -98,7 +98,8 @@
       "icon": "resources/ico.ico",
       "target": [
         "nsis"
-      ]
+      ],
+      "requestedExecutionLevel": "asInvoker"
     }
   }
 }

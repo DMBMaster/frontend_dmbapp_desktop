@@ -30,18 +30,30 @@ export const useAxiosInstance = () => {
     timestamp: new Date().toISOString()
   })
 
+  const getFullUrl = (requestBaseUrl, requestUrl) => {
+    if (!requestUrl) return requestBaseUrl || ''
+    if (/^https?:\/\//i.test(requestUrl)) return requestUrl
+    if (!requestBaseUrl) return requestUrl
+    const normalizedBase = requestBaseUrl.endsWith('/')
+      ? requestBaseUrl.slice(0, -1)
+      : requestBaseUrl
+    const normalizedPath = requestUrl.startsWith('/') ? requestUrl : `/${requestUrl}`
+    return `${normalizedBase}${normalizedPath}`
+  }
+
   // ─── Request interceptor ────────────────────────────────────────────────────
   instance.interceptors.request.use(
     (config) => {
       if (config.method?.toUpperCase() === 'GET') return config
 
       const pageInfo = getCurrentPageInfo()
+      const fullUrl = getFullUrl(config.baseURL, config.url)
       LoggerService.debug(
         'AxiosInstance.Request',
-        `Making ${config.method?.toUpperCase()} request to ${config.url}`,
+        `Making ${config.method?.toUpperCase()} request to ${fullUrl}`,
         {
           request: {
-            url: config.url,
+            url: fullUrl,
             method: config.method?.toUpperCase(),
             headers: config.headers,
             baseURL: config.baseURL
@@ -68,11 +80,12 @@ export const useAxiosInstance = () => {
     (response) => {
       const pageInfo = getCurrentPageInfo()
       const method = response.config.method?.toUpperCase()
+      const fullUrl = getFullUrl(response.config.baseURL, response.config.url)
 
       if (method === 'GET') return response
 
-      LoggerService.info('AxiosInstance.Response', `Success ${method} ${response.config.url}`, {
-        request: { url: response.config.url, method },
+      LoggerService.info('AxiosInstance.Response', `Success ${method} ${fullUrl}`, {
+        request: { url: fullUrl, method },
         response: {
           status: response.status,
           statusText: response.statusText,
@@ -85,7 +98,10 @@ export const useAxiosInstance = () => {
     async (error) => {
       const status = error.response?.status
       const url = error.config?.url
+      const fullUrl = getFullUrl(error.config?.baseURL, url)
       const method = error.config?.method?.toUpperCase()
+      const requestParams = error.config?.params
+      const requestPayload = error.config?.data
       const pageInfo = getCurrentPageInfo()
 
       // ── 401 early-exit ────────────────────────────────────────────────────
@@ -101,9 +117,11 @@ export const useAxiosInstance = () => {
           level: 'warn',
           source: 'AxiosInstance',
           method,
-          url,
+          url: fullUrl,
           status: 401,
           errorMsg: 'Unauthorized — token expired or invalid',
+          requestParams,
+          requestPayload,
           page: pageInfo
         })
 
@@ -126,9 +144,9 @@ export const useAxiosInstance = () => {
         if (status !== 200 || !error.response) {
           LoggerService.error(
             'AxiosInstance.Response',
-            `Error ${method} ${url} - Status: ${status || 'No Response'}`,
+            `Error ${method} ${fullUrl} - Status: ${status || 'No Response'}`,
             {
-              request: { url: error.config?.url, method, baseURL: error.config?.baseURL },
+              request: { url: fullUrl, method, baseURL: error.config?.baseURL },
               response: error.response
                 ? {
                     status: error.response.status,
@@ -150,10 +168,12 @@ export const useAxiosInstance = () => {
               level: 'error',
               source: 'AxiosInstance',
               method,
-              url,
+              url: fullUrl,
               status,
               errorMsg: error.message,
               errorCode: error.code,
+              requestParams,
+              requestPayload,
               responseData: error.response?.data,
               page: pageInfo
             })
@@ -165,9 +185,9 @@ export const useAxiosInstance = () => {
       // ── Non-GET errors — log lengkap ─────────────────────────────────────
       LoggerService.error(
         'AxiosInstance.Response',
-        `Error ${method} ${url} - Status: ${status || 'No Response'}`,
+        `Error ${method} ${fullUrl} - Status: ${status || 'No Response'}`,
         {
-          request: { url: error.config?.url, method, baseURL: error.config?.baseURL },
+          request: { url: fullUrl, method, baseURL: error.config?.baseURL },
           response: error.response
             ? {
                 status: error.response.status,
@@ -185,10 +205,12 @@ export const useAxiosInstance = () => {
         level: status >= 500 || !error.response ? 'error' : 'warn',
         source: 'AxiosInstance',
         method,
-        url,
+        url: fullUrl,
         status,
         errorMsg: error.message,
         errorCode: error.code,
+        requestParams,
+        requestPayload,
         responseData: error.response?.data,
         page: pageInfo
       })
@@ -196,9 +218,9 @@ export const useAxiosInstance = () => {
       // ── Handle UI notifications per status ────────────────────────────────
       if (status === 403) {
         LoggerService.warn('AxiosInstance.Auth', 'Forbidden access - user lacks permission', {
-          url: error.config?.url,
+          url: fullUrl,
           method,
-          meta: { page: pageInfo, attemptedAction: getActionDescription(method, url) }
+          meta: { page: pageInfo, attemptedAction: getActionDescription(method, fullUrl) }
         })
         notifier.show({
           message: 'Akses Ditolak',
@@ -207,7 +229,7 @@ export const useAxiosInstance = () => {
         })
       } else if (status === 500) {
         LoggerService.error('AxiosInstance.Server', 'Internal server error', {
-          url: error.config?.url,
+          url: fullUrl,
           response: error.response?.data,
           meta: { page: pageInfo }
         })
@@ -218,7 +240,7 @@ export const useAxiosInstance = () => {
         })
       } else if (!error.response) {
         LoggerService.error('AxiosInstance.Network', 'Network error - no response from server', {
-          url: error.config?.url,
+          url: fullUrl,
           error: error.message,
           meta: { page: pageInfo }
         })
@@ -228,8 +250,8 @@ export const useAxiosInstance = () => {
           severity: 'error'
         })
       } else {
-        LoggerService.warn('AxiosInstance.HTTP', `HTTP Error ${status} for ${method} ${url}`, {
-          request: { url: error.config?.url, method },
+        LoggerService.warn('AxiosInstance.HTTP', `HTTP Error ${status} for ${method} ${fullUrl}`, {
+          request: { url: fullUrl, method },
           response: error.response
             ? { status: error.response.status, data: error.response.data }
             : undefined,
@@ -258,6 +280,17 @@ export const createStandaloneAxios = () => {
     }
   })
 
+  const getFullUrl = (requestBaseUrl, requestUrl) => {
+    if (!requestUrl) return requestBaseUrl || ''
+    if (/^https?:\/\//i.test(requestUrl)) return requestUrl
+    if (!requestBaseUrl) return requestUrl
+    const normalizedBase = requestBaseUrl.endsWith('/')
+      ? requestBaseUrl.slice(0, -1)
+      : requestBaseUrl
+    const normalizedPath = requestUrl.startsWith('/') ? requestUrl : `/${requestUrl}`
+    return `${normalizedBase}${normalizedPath}`
+  }
+
   instance.interceptors.request.use(
     (requestConfig) => {
       const currentToken = localStorage.getItem('token')
@@ -275,9 +308,14 @@ export const createStandaloneAxios = () => {
     (error) => {
       const status = error.response?.status
       const url = error.config?.url
+      const fullUrl = getFullUrl(error.config?.baseURL, url)
       const method = error.config?.method?.toUpperCase()
+      const requestParams = error.config?.params
+      const requestPayload = error.config?.data
 
-      console.error(`[StandaloneAxios] Error ${method} ${url} - Status: ${status || 'No Response'}`)
+      console.error(
+        `[StandaloneAxios] Error ${method} ${fullUrl} - Status: ${status || 'No Response'}`
+      )
 
       if (status === 401) {
         console.warn('[StandaloneAxios] Unauthorized - token may be expired')
@@ -289,10 +327,12 @@ export const createStandaloneAxios = () => {
           level: status >= 500 || !error.response ? 'error' : 'warn',
           source: 'StandaloneAxios',
           method,
-          url,
+          url: fullUrl,
           status,
           errorMsg: error.message,
           errorCode: error.code,
+          requestParams,
+          requestPayload,
           responseData: error.response?.data
         })
       }

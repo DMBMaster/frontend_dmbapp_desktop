@@ -88,6 +88,17 @@ function trunc(str, max = 1024) {
   return s.length > max ? s.slice(0, max - 3) + '...' : s
 }
 
+function normalizeRequestData(value) {
+  if (value == null || value === '') return undefined
+  if (typeof value !== 'string') return value
+
+  try {
+    return JSON.parse(value)
+  } catch {
+    return value
+  }
+}
+
 /**
  * Kirim error log HTTP ke Discord webhook.
  *
@@ -99,6 +110,8 @@ function trunc(str, max = 1024) {
  * @param {number}  [opts.status]     - HTTP status code
  * @param {string}  [opts.errorMsg]   - pesan error
  * @param {string}  [opts.errorCode]  - axios error code (ERR_NETWORK, etc.)
+ * @param {object}  [opts.requestParams] - query params request
+ * @param {object|string} [opts.requestPayload] - body/payload request
  * @param {object}  [opts.responseData] - body response dari server
  * @param {object}  [opts.page]       - { path, route, timestamp }
  */
@@ -111,6 +124,8 @@ export async function sendErrorToDiscord(opts) {
     status,
     errorMsg,
     errorCode,
+    requestParams,
+    requestPayload,
     responseData,
     page
   } = opts
@@ -121,6 +136,7 @@ export async function sendErrorToDiscord(opts) {
     const emoji = EMOJI[level] ?? '🔴'
     const now = new Date().toISOString()
     const appVer = (await window.api?.getAppVersion?.()) || '—'
+    const normalizedRequestPayload = normalizeRequestData(requestPayload)
 
     // ── Tentukan judul berdasarkan status ─────────────────────────────────────
     let title = `${emoji} HTTP Error ${status ?? 'No Response'} — ${method} ${url}`
@@ -157,6 +173,26 @@ export async function sendErrorToDiscord(opts) {
               {
                 name: '❌ Error Message',
                 value: `\`\`\`${trunc(errorMsg, 512)}\`\`\``,
+                inline: false
+              }
+            ]
+          : []),
+
+        ...(requestParams
+          ? [
+              {
+                name: '🧾 Request Params',
+                value: `\`\`\`json\n${trunc(requestParams, 800)}\`\`\``,
+                inline: false
+              }
+            ]
+          : []),
+
+        ...(normalizedRequestPayload
+          ? [
+              {
+                name: '📤 Request Payload',
+                value: `\`\`\`json\n${trunc(normalizedRequestPayload, 800)}\`\`\``,
                 inline: false
               }
             ]
