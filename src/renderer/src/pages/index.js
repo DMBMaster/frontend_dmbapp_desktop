@@ -31,6 +31,7 @@ import { ProductCategoryPage } from './productsPage/category'
 import { TransactionActivityPage } from './otherPage/transactionActivity'
 import { RoomActivityPage } from './settingPage/room/activity'
 import { UnitPage } from './otherPage/satuan'
+import { ReportFarmPage } from './reportPage/farm'
 
 export {
   NotFoundPage,
@@ -65,5 +66,6 @@ export {
   ProductCategoryPage,
   TransactionActivityPage,
   RoomActivityPage,
-  UnitPage
+  UnitPage,
+  ReportFarmPage
 }

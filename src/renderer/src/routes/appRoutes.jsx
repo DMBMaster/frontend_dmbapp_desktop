@@ -30,7 +30,8 @@ import {
   ProductCategoryPage,
   TransactionActivityPage,
   RoomActivityPage,
-  UnitPage
+  UnitPage,
+  ReportFarmPage
 } from '@renderer/pages'
 import { CrashTestPage } from '@renderer/pages/crashTestPage'
 
@@ -258,6 +259,16 @@ export const appRoutes = [
     redirectTo: '/login'
   },
 
+  // #endregion
+
+  // #region - REPORT
+  {
+    path: '/report/farm',
+    element: <ReportFarmPage />,
+    active: true,
+    protected: true,
+    redirectTo: '/login'
+  },
   // #endregion
 
   // #region - OTHER

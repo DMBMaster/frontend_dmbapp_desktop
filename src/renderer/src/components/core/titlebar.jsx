@@ -736,39 +736,41 @@ export const TitleBar = ({ username, theme = 'light', onLogout, showUpdateButton
               </Box>
             )}
 
-            <Button
-              size="small"
-              variant="contained"
-              startIcon={<PointOfSale fontSize="small" />}
-              onClick={handleOpenCashierDialog}
-              disabled={isCheckingCashierSession}
-              sx={{
-                minHeight: 26,
-                px: 1.2,
-                py: 0.25,
-                borderRadius: 2,
-                textTransform: 'none',
-                fontSize: '0.75rem',
-                fontWeight: 600,
-                color: 'white',
-                bgcolor: cashierSession ? '#C24B4B' : '#2E9E6F',
-                WebkitAppRegion: 'no-drag',
-                transition: 'background-color 0.2s ease',
-                '&.Mui-disabled': {
-                  bgcolor: 'rgba(255,255,255,0.25)',
-                  color: 'rgba(255,255,255,0.85)'
-                },
-                '&:hover': {
-                  bgcolor: cashierSession ? '#AF3E3E' : '#278A61'
-                }
-              }}
-            >
-              {isCheckingCashierSession
-                ? 'Memeriksa...'
-                : cashierSession
-                  ? 'Tutup Kasir'
-                  : 'Buka Kasir'}
-            </Button>
+            {user && (
+              <Button
+                size="small"
+                variant="contained"
+                startIcon={<PointOfSale fontSize="small" />}
+                onClick={handleOpenCashierDialog}
+                disabled={isCheckingCashierSession}
+                sx={{
+                  minHeight: 26,
+                  px: 1.2,
+                  py: 0.25,
+                  borderRadius: 2,
+                  textTransform: 'none',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  color: 'white',
+                  bgcolor: cashierSession ? '#C24B4B' : '#2E9E6F',
+                  WebkitAppRegion: 'no-drag',
+                  transition: 'background-color 0.2s ease',
+                  '&.Mui-disabled': {
+                    bgcolor: 'rgba(255,255,255,0.25)',
+                    color: 'rgba(255,255,255,0.85)'
+                  },
+                  '&:hover': {
+                    bgcolor: cashierSession ? '#AF3E3E' : '#278A61'
+                  }
+                }}
+              >
+                {isCheckingCashierSession
+                  ? 'Memeriksa...'
+                  : cashierSession
+                    ? 'Tutup Kasir'
+                    : 'Buka Kasir'}
+              </Button>
+            )}
 
             {/* Network Status Indicator */}
             <Tooltip title={isOnline ? 'Online' : 'Offline - Data disimpan lokal'} arrow>
@@ -1086,12 +1088,12 @@ export const TitleBar = ({ username, theme = 'light', onLogout, showUpdateButton
           </ListItemIcon>
           <ListItemText>Update</ListItemText>
         </MenuItem>
-        {/* <MenuItem onClick={() => navigate('/crash-test')} sx={{ py: 1.5 }}>
+        <MenuItem onClick={() => navigate('/report/farm')} sx={{ py: 1.5 }}>
           <ListItemIcon>
             <IconReload fontSize="small" />
           </ListItemIcon>
           <ListItemText>Test</ListItemText>
-        </MenuItem> */}
+        </MenuItem>
         <MenuItem onClick={handleSettings} sx={{ py: 1.5 }}>
           <ListItemIcon>
             <Settings fontSize="small" />
