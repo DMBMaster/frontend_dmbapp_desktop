@@ -340,7 +340,9 @@ const TransactionService = () => {
     }
 
     try {
-      const res = await axiosInstance.delete(`/trx-service/v3/history-transaction/${guid}`)
+      const res = await axiosInstance.post(`/trx-service/mytransaction/merchant/del`, {
+        trx_id: `${guid}`
+      })
 
       // Remove from cache after successful delete
       await localdb.transactions.where({ transaction_guid: guid }).delete()

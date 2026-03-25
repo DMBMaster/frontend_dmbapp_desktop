@@ -89,7 +89,11 @@ const Breadcrumb = ({ subtitle, items, title, children, showBackButton = false, 
             width: '100%'
           }}
         >
-          {children ? <Box sx={{ top: '0px', position: 'absolute' }}>{children}</Box> : null}
+          {children ? (
+            <Box sx={{ top: '50%', position: 'absolute', transform: 'translateY(-50%)' }}>
+              {children}
+            </Box>
+          ) : null}
         </Box>
       </Grid>
     </Grid>
