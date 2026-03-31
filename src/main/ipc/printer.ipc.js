@@ -25,13 +25,33 @@ export function registerPrinterIpc() {
       rWin.webContents.executeJavaScript(`(function(){
         try {
           const data = ${payload}
-          document.getElementById('header1').innerText = data.header1 || ''
-          document.getElementById('header2').innerText = data.header2 || ''
-          document.getElementById('header3').innerText = data.header3 || ''
+          const h1 = document.getElementById('header1')
+          const h2 = document.getElementById('header2')
+          const h3 = document.getElementById('header3')
+          h1.innerText = data.header1 || ''
+          h2.innerText = data.header2 || ''
+          h3.innerText = data.header3 || ''
+          if (!data.header1) h1.style.display = 'none'
+          if (!data.header2) h2.style.display = 'none'
+          if (!data.header3) h3.style.display = 'none'
+          if (!data.header1 && !data.header2 && !data.header3) {
+            var lines = document.querySelectorAll('.line')
+            if (lines[0]) lines[0].style.display = 'none'
+          }
           document.getElementById('content').innerHTML = data.contentHTML || ''
-          document.getElementById('footer1').innerText = data.footer1 || ''
-          document.getElementById('footer2').innerText = data.footer2 || ''
-          document.getElementById('footer3').innerText = data.footer3 || ''
+          const f1 = document.getElementById('footer1')
+          const f2 = document.getElementById('footer2')
+          const f3 = document.getElementById('footer3')
+          f1.innerText = data.footer1 || ''
+          f2.innerText = data.footer2 || ''
+          f3.innerText = data.footer3 || ''
+          if (!data.footer1) f1.style.display = 'none'
+          if (!data.footer2) f2.style.display = 'none'
+          if (!data.footer3) f3.style.display = 'none'
+          if (!data.footer1 && !data.footer2 && !data.footer3) {
+            var lines2 = document.querySelectorAll('.line')
+            if (lines2[1]) lines2[1].style.display = 'none'
+          }
         } catch (e) { console.error(e) }
       })()`)
 

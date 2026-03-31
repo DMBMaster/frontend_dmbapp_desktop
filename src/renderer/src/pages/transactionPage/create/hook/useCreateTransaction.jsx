@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { useDropzone } from 'react-dropzone'
 // Services
 import CartService from '@renderer/services/cartService'
@@ -11,7 +10,6 @@ import MediaService from '@renderer/services/mediaService'
 import { buildReceiptHTML } from '../components/printTransaction'
 
 export const useCreateTransaction = () => {
-  const navigate = useNavigate()
   const notifier = useNotifier()
 
   // Services
@@ -93,6 +91,12 @@ export const useCreateTransaction = () => {
   const [deleteDialog, setDeleteDialog] = useState({
     open: false,
     item: null
+  })
+
+  // Print preview dialog
+  const [printPreviewDialog, setPrintPreviewDialog] = useState({
+    open: false,
+    dataToprint: null
   })
 
   // Pagination
@@ -534,21 +538,45 @@ export const useCreateTransaction = () => {
       notes: item.note || ''
     }))
 
+    const discountValue =
+      discountType === 'nominal'
+        ? Number(discountAmount || 0)
+        : discountType === 'percentage'
+          ? (subTotal * Number(discountAmount || 0)) / 100
+          : 0
+
+    const grandTotalFinal = finalGrandTotal || grandTotal
+    const paid =
+      paymentMethod === 'Cash' && status === 'PAID'
+        ? parseCurrencyToNumber(amountPaid)
+        : grandTotalFinal
+    const changeVal =
+      paymentMethod === 'Cash' && status === 'PAID' ? Math.max(0, paid - grandTotalFinal) : 0
+
+    const paymentLabel =
+      paymentMethod === 'Cash'
+        ? 'Cash'
+        : paymentMethod === 'bank_transfer'
+          ? 'Transfer'
+          : 'Debit/Credit'
+
     return {
+      outletName: localStorage.getItem('outletName') || 'Outlet',
+      outletAddress: localStorage.getItem('outletAddress') || '',
       invoiceNo: '',
       invoiceDate: '',
-      dueDate: '',
-      customerName: '',
+      customerName: customer?.full_name || customerName || 'Umum',
+      cashierName: localStorage.getItem('userName') || '',
       items,
       totalAmount: subTotal,
-      discount:
-        discountType === 'nominal'
-          ? Number(discountAmount || 0)
-          : discountType === 'percentage'
-            ? (subTotal * Number(discountAmount || 0)) / 100
-            : 0,
+      discount: discountValue,
       tax: 0,
-      grandTotal: finalGrandTotal || grandTotal
+      grandTotal: grandTotalFinal,
+      paymentMethod: paymentLabel,
+      amountPaid: paid,
+      change: changeVal,
+      notes: notes || '',
+      footer: 'Thank You For Coming !!!'
     }
   }
 
@@ -594,21 +622,17 @@ export const useCreateTransaction = () => {
       })
 
       const printOrder = buildPrintPayloadFromCart()
-
       const dataToprint = {
-        header1: localStorage.getItem('outletName') || 'Outlet',
-        header2: 'Checking Order',
-        header3: '---',
+        header1: '',
+        header2: '',
+        header3: '',
         contentHTML: buildReceiptHTML(printOrder),
-        footer1: 'Terima kasih atas kunjungan Anda!',
-        footer2: 'Simpan struk ini sebagai bukti pembayaran.'
+        footer1: '',
+        footer2: ''
       }
-      window.api.printOrderReceipt(dataToprint)
 
-      // Navigate to history after success
-      setTimeout(() => {
-        navigate('/transaction/history')
-      }, 1000)
+      // Open preview dialog — user can choose to print or skip
+      setPrintPreviewDialog({ open: true, dataToprint, printOrder })
     } catch (error) {
       console.error('Error submitting transaction:', error)
       const errorMessage = error instanceof Error ? error.message : 'Gagal membuat transaksi'
@@ -775,6 +799,10 @@ export const useCreateTransaction = () => {
 
     // Checkout
     handleSubmit,
+
+    // Print preview
+    printPreviewDialog,
+    setPrintPreviewDialog,
 
     // Pagination
     page,

@@ -54,10 +54,13 @@ import {
   IconUserCheck,
   IconNotes,
   IconChevronDown,
-  IconChevronUp
+  IconChevronUp,
+  IconPrinter,
+  IconX
 } from '@tabler/icons-react'
 
 import Breadcrumb from '@renderer/components/ui/breadcrumb/Breadcrumb'
+import { useNavigate } from 'react-router-dom'
 import { useCreateTransaction } from './hook/useCreateTransaction'
 import { formatRupiah, getImgUrl } from '@renderer/utils/myFunctions'
 import { useMemo, useState } from 'react'
@@ -71,6 +74,7 @@ const BCrumb = [{ to: '/', title: 'Home' }, { title: 'Transaksi' }, { title: 'Bu
 // MAIN COMPONENT
 // ================================
 export const CreateTransactionPage = () => {
+  const navigate = useNavigate()
   const [viewMode, setViewMode] = useState('v1')
 
   const {
@@ -164,6 +168,10 @@ export const CreateTransactionPage = () => {
 
     // Checkout
     handleSubmit,
+
+    // Print preview
+    printPreviewDialog,
+    setPrintPreviewDialog,
 
     // Pagination
     page,
@@ -492,6 +500,19 @@ export const CreateTransactionPage = () => {
                       {formatRupiah(price)}
                     </Typography>
                   </Box>
+
+                  {/* Clear selection */}
+                  <IconButton
+                    size="small"
+                    onClick={() => {
+                      handleProductChange(null, null)
+                      setQuantity(1)
+                    }}
+                    title="Batalkan pilihan"
+                    sx={{ color: 'text.secondary', flexShrink: 0 }}
+                  >
+                    <IconX size={16} />
+                  </IconButton>
 
                   {/* Satuan */}
                   <Box width={130}>
@@ -2010,6 +2031,116 @@ export const CreateTransactionPage = () => {
         </Grid>
       )}
       */}
+
+      {/* ================================================================
+          PRINT PREVIEW DIALOG
+      ================================================================ */}
+      <Dialog
+        open={printPreviewDialog.open}
+        onClose={() => {
+          setPrintPreviewDialog({ open: false, dataToprint: null })
+          navigate('/transaction/history')
+        }}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 3 } }}
+      >
+        <DialogTitle sx={{ pb: 1 }}>
+          <Stack direction="row" justifyContent="space-between" alignItems="center">
+            <Stack direction="row" spacing={1} alignItems="center">
+              <IconPrinter size={20} />
+              <Typography variant="subtitle1" fontWeight={700}>
+                Preview Struk
+              </Typography>
+            </Stack>
+            <IconButton
+              size="small"
+              onClick={() => {
+                setPrintPreviewDialog({ open: false, dataToprint: null })
+                navigate('/transaction/history')
+              }}
+            >
+              <IconX size={18} />
+            </IconButton>
+          </Stack>
+        </DialogTitle>
+
+        <DialogContent dividers sx={{ p: 0, bgcolor: '#f5f5f5' }}>
+          {/* Thermal receipt preview using iframe */}
+          {printPreviewDialog.dataToprint && (
+            <Box
+              sx={{
+                display: 'flex',
+                justifyContent: 'center',
+                py: 2,
+                px: 1,
+                overflowY: 'auto',
+                maxHeight: '60vh'
+              }}
+            >
+              <Box
+                sx={{
+                  bgcolor: '#fff',
+                  boxShadow: '0 2px 12px rgba(0,0,0,0.15)',
+                  borderRadius: 1,
+                  width: 300,
+                  p: 0,
+                  overflow: 'hidden'
+                }}
+              >
+                <iframe
+                  srcDoc={printPreviewDialog.dataToprint.contentHTML}
+                  style={{
+                    width: '100%',
+                    border: 'none',
+                    display: 'block',
+                    minHeight: 480
+                  }}
+                  title="Struk Preview"
+                  onLoad={(e) => {
+                    // Auto-resize iframe to content height
+                    try {
+                      const h = e.target.contentDocument?.body?.scrollHeight
+                      if (h) e.target.style.height = h + 24 + 'px'
+                    } catch (error) {
+                      console.log(error)
+                    }
+                  }}
+                />
+              </Box>
+            </Box>
+          )}
+        </DialogContent>
+
+        <DialogActions sx={{ p: 2, gap: 1 }}>
+          <Button
+            variant="outlined"
+            color="inherit"
+            fullWidth
+            onClick={() => {
+              setPrintPreviewDialog({ open: false, dataToprint: null })
+              navigate('/transaction/history')
+            }}
+          >
+            Lewati
+          </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            fullWidth
+            startIcon={<IconPrinter size={16} />}
+            onClick={() => {
+              if (printPreviewDialog.dataToprint) {
+                window.api.printOrderReceipt(printPreviewDialog.dataToprint)
+              }
+              setPrintPreviewDialog({ open: false, dataToprint: null })
+              navigate('/transaction/history')
+            }}
+          >
+            Print Struk
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialog.open} onClose={handleCancelDelete}>

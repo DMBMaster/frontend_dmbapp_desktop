@@ -45,6 +45,7 @@ import { IconReload } from '@tabler/icons-react'
 import { formatRupiah } from '@renderer/utils/myFunctions'
 import ConfigService from '@renderer/services/configService'
 import { useNotifier } from './NotificationProvider'
+import { testingRoutes } from '@renderer/utils/config'
 
 // eslint-disable-next-line react/prop-types
 export const TitleBar = ({ username, theme = 'light', onLogout, showUpdateButton = true }) => {
@@ -1088,12 +1089,15 @@ export const TitleBar = ({ username, theme = 'light', onLogout, showUpdateButton
           </ListItemIcon>
           <ListItemText>Update</ListItemText>
         </MenuItem>
-        <MenuItem onClick={() => navigate('/report/farm')} sx={{ py: 1.5 }}>
-          <ListItemIcon>
-            <IconReload fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>Test</ListItemText>
-        </MenuItem>
+        {testingRoutes &&
+          testingRoutes.map((route, index) => (
+            <MenuItem key={index} onClick={() => navigate(route)} sx={{ py: 1.5 }}>
+              <ListItemIcon>
+                <IconReload fontSize="small" />
+              </ListItemIcon>
+              <ListItemText>Testing {index + 1}</ListItemText>
+            </MenuItem>
+          ))}
         <MenuItem onClick={handleSettings} sx={{ py: 1.5 }}>
           <ListItemIcon>
             <Settings fontSize="small" />
