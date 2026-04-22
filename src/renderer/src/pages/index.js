@@ -28,6 +28,7 @@ import { StockRotationPage } from './inventoryPage/stock/rotation'
 import { StockMovementPage } from './inventoryPage/stock/movement'
 import { CreateStockMovementPage } from './inventoryPage/stock/movement/create'
 import { ProductCategoryPage } from './productsPage/category'
+import { RatePlanPage } from './productsPage/rate-plan'
 import { TransactionActivityPage } from './otherPage/transactionActivity'
 import { RoomActivityPage } from './settingPage/room/activity'
 import { UnitPage } from './otherPage/satuan'
@@ -64,6 +65,7 @@ export {
   StockMovementPage,
   CreateStockMovementPage,
   ProductCategoryPage,
+  RatePlanPage,
   TransactionActivityPage,
   RoomActivityPage,
   UnitPage,

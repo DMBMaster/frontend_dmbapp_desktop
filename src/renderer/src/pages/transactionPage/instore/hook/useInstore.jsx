@@ -9,6 +9,29 @@ export const useInstore = () => {
   const instoreService = InstoreService()
   const mediaService = MediaService()
 
+  const formatDate = (date) => {
+    const parsedDate = new Date(date)
+    return parsedDate.toISOString().split('T')[0]
+  }
+
+  const today = new Date()
+  const tomorrow = new Date(today)
+  tomorrow.setDate(today.getDate() + 1)
+  const yesterday = new Date(today)
+  yesterday.setDate(today.getDate() - 1)
+
+  const defaultCheckInDate = formatDate(today)
+  const defaultCheckOutDate = formatDate(tomorrow)
+  const createDefaultRoomDetail = () => ({
+    roomType: '',
+    roomNumber: '',
+    ratePlan: '',
+    ratePlanPrice: 0,
+    adultCount: '',
+    childCount: '',
+    breakfast: 'false'
+  })
+
   // ============================
   // STATE MANAGEMENT
   // ============================
@@ -17,13 +40,13 @@ export const useInstore = () => {
   const [customers, setCustomers] = useState([])
   const [selectedCustomer, setSelectedCustomer] = useState(null)
   const [rooms, setRooms] = useState([{ roomType: '', roomNumber: '' }])
-  const [roomCount, setRoomCount] = useState('')
-  const [roomDetails, setRoomDetails] = useState([])
+  const [roomCount, setRoomCount] = useState(1)
+  const [roomDetails, setRoomDetails] = useState([createDefaultRoomDetail()])
   const [roomTypes, setRoomTypes] = useState([])
   const [adultCount, setAdultCount] = useState('')
   const [childCount, setChildCount] = useState('')
-  const [checkInDate, setCheckInDate] = useState('')
-  const [checkOutDate, setCheckOutDate] = useState('')
+  const [checkInDate, setCheckInDate] = useState(defaultCheckInDate)
+  const [checkOutDate, setCheckOutDate] = useState(defaultCheckOutDate)
   const [guestName, setGuestName] = useState('')
   const [guestPhone, setGuestPhone] = useState('')
   const [identityType, setIdentityType] = useState('')
@@ -76,15 +99,6 @@ export const useInstore = () => {
   // ============================
   // DATE CALCULATIONS
   // ============================
-
-  const today = new Date()
-  const yesterday = new Date(today)
-  yesterday.setDate(today.getDate() - 1)
-
-  const formatDate = (date) => {
-    const d = new Date(date)
-    return d.toISOString().split('T')[0]
-  }
 
   const allowedCheckInMin = formatDate(yesterday)
   const minCheckOutDate = checkInDate
@@ -289,14 +303,7 @@ export const useInstore = () => {
   const handleRoomCountChange = (e) => {
     const count = parseInt(e.target.value, 10)
     setRoomCount(count)
-    const details = Array.from({ length: count }, () => ({
-      roomType: '',
-      ratePlan: '',
-      ratePlanPrice: 0,
-      adultCount: '',
-      childCount: '',
-      breakfast: 'false'
-    }))
+    const details = Array.from({ length: count }, createDefaultRoomDetail)
     setRoomDetails(details)
     calculateSubTotal(rooms, count)
   }
@@ -450,9 +457,9 @@ export const useInstore = () => {
     setApprovalCode('')
     setTraceNumber('')
     setRoomCount(1)
-    setRoomDetails([])
-    setCheckInDate('')
-    setCheckOutDate('')
+    setRoomDetails([createDefaultRoomDetail()])
+    setCheckInDate(defaultCheckInDate)
+    setCheckOutDate(defaultCheckOutDate)
     setIsValid(false)
   }
 

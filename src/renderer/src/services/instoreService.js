@@ -407,14 +407,7 @@ const InstoreService = () => {
     }
 
     try {
-      const response = await axiosInstance.post('/get-rate-plan', params, {
-        headers: {
-          Authorization: `Bearer ${getToken()}`,
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache',
-          Pragma: 'no-cache'
-        }
-      })
+      const response = await axiosInstance.get('/product-service/rate-plan', { params })
       return response.data
     } catch (error) {
       console.error('Error fetching rate plans from service:', error)

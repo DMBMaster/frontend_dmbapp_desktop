@@ -3,7 +3,7 @@
   "version": "1.0.8",
   "description": "An Electron application with React",
   "main": "./out/main/index.js",
-  "author": "example.com",
+  "author": "PT Damai Nusa Abadi",
   "homepage": "https://electron-vite.org",
   "scripts": {
     "format": "prettier --write .",
@@ -98,8 +98,7 @@
       "icon": "resources/ico.ico",
       "target": [
         "nsis"
-      ],
-      "requestedExecutionLevel": "asInvoker"
+      ]
     }
   }
 }

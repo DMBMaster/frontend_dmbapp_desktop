@@ -14,6 +14,15 @@ const FrontofficeService = () => {
   const axiosInstance = useAxiosInstance()
   const getOutletGuid = () => localStorage.getItem('outletGuid') || ''
   const getToken = () => localStorage.getItem('token') || ''
+  const buildCacheKey = (params = {}) =>
+    JSON.stringify(
+      Object.keys(params)
+        .sort()
+        .reduce((accumulator, key) => {
+          accumulator[key] = params[key]
+          return accumulator
+        }, {})
+    )
 
   // ============================
   // HELPER: Get from cache
@@ -66,12 +75,7 @@ const FrontofficeService = () => {
     }
 
     try {
-      const res = await axiosInstance.get('/trx-service/v2/dashboard', {
-        params: {
-          outlet_id: getOutletGuid(),
-          ...params
-        }
-      })
+      const res = await axiosInstance.get('/trx-service/v2/hotel/metrics', { params })
 
       const data = res.data?.data || res.data
       await saveToCache('fo_forecast', 'default', data)
@@ -85,10 +89,90 @@ const FrontofficeService = () => {
   }
 
   // ============================
+  // GET FRONT OFFICE DASHBOARD STATS
+  // ============================
+  const getFoDashboardStats = async (params = {}) => {
+    const requestParams = {
+      outlet_id: getOutletGuid(),
+      ...params
+    }
+    const cacheKey = buildCacheKey(requestParams)
+
+    if (!isOnline()) {
+      console.log('📴 Offline → Loading front office stats from cache')
+      const cached = await getFromCache('fo_dashboard_stats', cacheKey)
+      return (
+        cached || {
+          data: {
+            reservations: 0,
+            arrivals: 0,
+            departures: 0,
+            in_house: 0,
+            pending: 0,
+            cancelled: 0,
+            total: 0
+          }
+        }
+      )
+    }
+
+    try {
+      const res = await axiosInstance.get('/merchant/fo-dashboard/stats', {
+        params: requestParams
+      })
+
+      const data = res.data?.data || res.data || {}
+      await saveToCache('fo_dashboard_stats', cacheKey, data)
+      return { data }
+    } catch (error) {
+      console.warn('⚠️ API failed → Loading front office stats from cache')
+      const cached = await getFromCache('fo_dashboard_stats', cacheKey)
+      if (cached) return cached
+      throw error
+    }
+  }
+
+  // ============================
+  // GET FRONT OFFICE DASHBOARD BOOKINGS
+  // ============================
+  const getFoDashboardBookings = async (params = {}) => {
+    const requestParams = {
+      outlet_id: getOutletGuid(),
+      ...params
+    }
+    const cacheKey = buildCacheKey(requestParams)
+
+    if (!isOnline()) {
+      console.log('📴 Offline → Loading front office bookings from cache')
+      const cached = await getFromCache('fo_dashboard_bookings', cacheKey)
+      return cached || { data: [], pagination: { current_page: 1, total_pages: 1 } }
+    }
+
+    try {
+      const res = await axiosInstance.get('/merchant/fo-dashboard/bookings', {
+        params: requestParams
+      })
+
+      const data = res.data || {}
+      await saveToCache('fo_dashboard_bookings', cacheKey, data)
+      return { data }
+    } catch (error) {
+      console.warn('⚠️ API failed → Loading front office bookings from cache')
+      const cached = await getFromCache('fo_dashboard_bookings', cacheKey)
+      if (cached) return cached
+      throw error
+    }
+  }
+
+  // ============================
   // GET RESERVATIONS (Arrivals / Departures / Stayovers / In-House)
   // ============================
   const getReservations = async (params = {}) => {
-    const cacheKey = `${params.status || 'all'}_${params.start_date || ''}_${params.end_date || ''}_${params.page || 1}`
+    const requestParams = {
+      outlet_id: getOutletGuid(),
+      ...params
+    }
+    const cacheKey = buildCacheKey(requestParams)
 
     if (!isOnline()) {
       console.log('📴 Offline → Loading reservations from cache')
@@ -97,11 +181,11 @@ const FrontofficeService = () => {
     }
 
     try {
-      const res = await axiosInstance.get('/trx-service/v3/history-transaction', {
-        params: {
-          outlet_id: getOutletGuid(),
-          ...params
-        }
+      const filter = requestParams.filter || 'arrivals'
+      const { filter: _ignoredFilter, ...queryParams } = requestParams
+
+      const res = await axiosInstance.get(`/trx-service/v2/property?filter=${filter}`, {
+        params: queryParams
       })
 
       const responseData = res.data
@@ -195,6 +279,31 @@ const FrontofficeService = () => {
   }
 
   // ============================
+  // GET AVAILABLE ROOMS COUNT
+  // ============================
+  const getAvailableRoomsCount = async () => {
+    if (!isOnline()) {
+      console.log('📴 Offline → Loading available rooms count from cache')
+      const cached = await getFromCache('fo_available_count', 'default')
+      return cached || { data: { count: 0 } }
+    }
+
+    try {
+      const outletGuid = getOutletGuid()
+      const res = await axiosInstance.get(`/product-service/rooms-count/outlet/${outletGuid}`)
+
+      const data = res.data
+      await saveToCache('fo_available_count', 'default', data)
+      return { data }
+    } catch (error) {
+      console.warn('⚠️ API failed → Loading available rooms count from cache')
+      const cached = await getFromCache('fo_available_count', 'default')
+      if (cached) return cached
+      throw error
+    }
+  }
+
+  // ============================
   // CHECK-IN
   // ============================
   const checkIn = async (guid, payload) => {
@@ -222,10 +331,13 @@ const FrontofficeService = () => {
 
   return {
     getForecast,
+    getFoDashboardStats,
+    getFoDashboardBookings,
     getReservations,
     getReservationDetail,
     getRooms,
     getCustomers,
+    getAvailableRoomsCount,
     checkIn,
     checkOut
   }

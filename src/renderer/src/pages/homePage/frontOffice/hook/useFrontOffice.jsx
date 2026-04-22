@@ -2,36 +2,25 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import dayjs from 'dayjs'
 import FrontofficeService from '@renderer/services/frontofficeService'
+import { useDebounce } from '@uidotdev/usehooks'
 
-// ================================
-// Tab status mapping
-// ================================
-const TAB_STATUS_MAP = {
-  0: 'arrival', // Arrivals
-  1: 'departure', // Departures
-  2: 'stayover', // Stayovers
-  3: 'in-house' // In-House Guests
-}
+const TAB_CONFIG = [
+  { view: 'new', legacy: 'arrivals', counterKey: 'reservations' },
+  { view: 'arrivals', legacy: 'arrivals', counterKey: 'arrivals' },
+  { view: 'departures', legacy: 'departures', counterKey: 'departures' },
+  { view: 'in-house', legacy: 'in_house_guest', counterKey: 'in_house' }
+]
 
-// ================================
-// HOOK: UseFrontOffice
-// ================================
 export const UseFrontOffice = () => {
   const navigate = useNavigate()
   const frontofficeService = FrontofficeService()
+  const formattedToday = dayjs().format('YYYY-MM-DD')
+  const formattedTomorrow = dayjs().add(1, 'day').format('YYYY-MM-DD')
 
-  // ============================
-  // STATE
-  // ============================
-
-  // Loading states
   const [loading, setLoading] = useState(true)
   const [loadingTrx, setLoadingTrx] = useState(false)
-
-  // Date display
   const [formattedDate, setFormattedDate] = useState('')
 
-  // Forecast data
   const [forecast, setForecast] = useState({
     occupancy: 0,
     room_nights: 0,
@@ -40,99 +29,134 @@ export const UseFrontOffice = () => {
     revenue: 0
   })
 
-  // Summary counts
   const [reservationCount, setReservationCount] = useState(0)
   const [availableCount, setAvailableCount] = useState(0)
   const [cancel, setCancel] = useState(0)
 
-  // Tab state
   const [value, setValue] = useState(0)
+  const [startDate, setStartDate] = useState(formattedToday)
+  const [endDate, setEndDate] = useState(formattedTomorrow)
 
-  // Date filters
-  const [startDate, setStartDate] = useState(dayjs().format('YYYY-MM-DD'))
-  const [endDate, setEndDate] = useState(dayjs().format('YYYY-MM-DD'))
-
-  // Table data
   const [data, setData] = useState([])
+  const [cardData, setCardData] = useState([])
 
-  // Pagination
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
   const [totalCount, setTotalCount] = useState(0)
   const [pageCount, setPageCount] = useState(1)
 
-  // Drawer states (Check-in / Check-out)
+  const [foStats, setFoStats] = useState({
+    reservations: 0,
+    arrivals: 0,
+    departures: 0,
+    in_house: 0,
+    pending: 0,
+    cancelled: 0,
+    total: 0
+  })
+
+  const [viewMode, setViewMode] = useState('table')
+  const [search, setSearch] = useState('')
+  const debouncedSearch = useDebounce(search, 500)
+  const [status, setStatus] = useState('CONFIRMED')
+
   const [openCI, setOpenCI] = useState(false)
   const [openCO, setOpenCO] = useState(false)
   const [selectedReservation, setSelectedReservation] = useState(null)
   const [ReservationDetails, setReservationDetails] = useState(null)
 
-  // ============================
-  // FORMATTED DATE (today)
-  // ============================
   useEffect(() => {
-    const today = dayjs()
-    // Format: "Jumat, 07 Februari"
-    setFormattedDate(today.format('dddd, DD MMMM'))
+    setFormattedDate(dayjs().format('dddd, DD MMMM'))
   }, [])
 
-  // ============================
-  // FETCH FORECAST / DASHBOARD SUMMARY
-  // ============================
   const fetchForecast = useCallback(async () => {
     try {
       const result = await frontofficeService.getForecast({
-        start_date: startDate,
-        end_date: endDate
-      })
-      const d = result.data
-      setForecast({
-        occupancy: d?.occupancy ?? 0,
-        room_nights: d?.room_nights ?? 0,
-        adr: d?.adr ?? 0,
-        revPar: d?.revPar ?? d?.rev_par ?? 0,
-        revenue: d?.revenue ?? 0
+        outlet_id: localStorage.getItem('outletGuid'),
+        start_date: startDate || formattedToday,
+        end_date: endDate || formattedTomorrow
       })
 
-      // Extract summary counts
-      setReservationCount(d?.reservation_count ?? d?.total_booking ?? 0)
-      setAvailableCount(d?.available_count ?? d?.available_rooms ?? 0)
-      setCancel(d?.cancel_count ?? d?.cancel ?? 0)
+      const metrics = result.data || {}
+      setForecast({
+        occupancy: metrics.occupancy ?? 0,
+        room_nights: metrics.room_nights ?? 0,
+        adr: metrics.adr ?? 0,
+        revPar: metrics.revPar ?? metrics.rev_par ?? 0,
+        revenue: metrics.revenue ?? 0
+      })
+
+      setReservationCount(metrics.reservation_count ?? metrics.total_booking ?? 0)
+      setCancel(metrics.cancel_count ?? metrics.cancel ?? 0)
     } catch (error) {
       console.error('Error fetching forecast:', error)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startDate, endDate])
 
-  // ============================
-  // FETCH RESERVATIONS (TAB DATA)
-  // ============================
+  const fetchAvailable = useCallback(async () => {
+    try {
+      const result = await frontofficeService.getAvailableRoomsCount()
+      setAvailableCount(result.data?.data?.count ?? 0)
+    } catch (error) {
+      console.error('Error fetching available rooms count:', error)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const fetchFoStats = useCallback(async () => {
+    try {
+      const result = await frontofficeService.getFoDashboardStats({
+        outlet_id: localStorage.getItem('outletGuid')
+      })
+      const stats = result.data || {}
+
+      setFoStats({
+        reservations: stats.reservations ?? 0,
+        arrivals: stats.arrivals ?? 0,
+        departures: stats.departures ?? 0,
+        in_house: stats.in_house ?? 0,
+        pending: stats.pending ?? 0,
+        cancelled: stats.cancelled ?? 0,
+        total: stats.total ?? 0
+      })
+      setReservationCount(stats.total ?? 0)
+      setCancel(stats.cancelled ?? 0)
+    } catch (error) {
+      console.error('Error fetching front office stats:', error)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const fetchReservations = useCallback(async () => {
     setLoadingTrx(true)
     try {
-      const status = TAB_STATUS_MAP[value] || 'arrival'
+      const currentTab = TAB_CONFIG[value] || TAB_CONFIG[0]
       const result = await frontofficeService.getReservations({
-        status,
-        start_date: startDate,
-        end_date: endDate,
-        page,
-        page_size: pageSize
+        filter: currentTab.legacy,
+        p: page,
+        ps: pageSize,
+        ...(startDate ? { start_at: startDate } : {}),
+        ...(endDate ? { end_at: endDate } : {}),
+        ...(status ? { status } : {}),
+        ...(debouncedSearch ? { search: debouncedSearch } : {})
       })
 
       const responseData = result.data
 
-      // Handle data shape
-      if (responseData?.data) {
-        setData(responseData.data)
-        setTotalCount(responseData.total || responseData.data.length)
-        setPageCount(
-          responseData.page_count ||
-            Math.ceil((responseData.total || responseData.data.length) / pageSize)
-        )
+      if (responseData?.data && Array.isArray(responseData.data)) {
+        const rows = responseData.data
+        const meta = responseData.meta || {}
+        const total = meta.totalCount ?? responseData.total ?? rows.length
+        const resolvedPageSize = meta.perPage ?? pageSize
+
+        setData(rows)
+        setTotalCount(total)
+        setPageCount(meta.totalPages ?? Math.max(1, Math.ceil(total / resolvedPageSize)))
       } else if (Array.isArray(responseData)) {
         setData(responseData)
         setTotalCount(responseData.length)
-        setPageCount(Math.ceil(responseData.length / pageSize))
+        setPageCount(Math.max(1, Math.ceil(responseData.length / pageSize)))
       } else {
         setData([])
         setTotalCount(0)
@@ -147,11 +171,40 @@ export const UseFrontOffice = () => {
       setLoadingTrx(false)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value, startDate, endDate, page, pageSize])
+  }, [value, startDate, endDate, page, pageSize, debouncedSearch, status])
 
-  // ============================
-  // FETCH RESERVATION DETAIL (for CI/CO drawer)
-  // ============================
+  const fetchCardBookings = useCallback(async () => {
+    setLoadingTrx(true)
+    try {
+      const currentTab = TAB_CONFIG[value] || TAB_CONFIG[0]
+      const result = await frontofficeService.getFoDashboardBookings({
+        outlet_id: localStorage.getItem('outletGuid'),
+        view: currentTab.view,
+        status: status || 'CONFIRMED',
+        date: startDate || formattedToday,
+        p: page,
+        ps: pageSize,
+        ...(debouncedSearch ? { search: debouncedSearch } : {})
+      })
+
+      const payload = result.data || {}
+      const rows = Array.isArray(payload.data) ? payload.data : []
+      const pagination = payload.pagination || {}
+
+      setCardData(rows)
+      setTotalCount(pagination.total_records ?? payload.count ?? rows.length)
+      setPageCount(Math.max(1, pagination.total_pages ?? 1))
+    } catch (error) {
+      console.error('Error fetching front office card bookings:', error)
+      setCardData([])
+      setTotalCount(0)
+      setPageCount(1)
+    } finally {
+      setLoadingTrx(false)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value, startDate, page, pageSize, debouncedSearch, status])
+
   const fetchReservationDetail = useCallback(async (guid) => {
     try {
       const result = await frontofficeService.getReservationDetail(guid)
@@ -163,29 +216,30 @@ export const UseFrontOffice = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // ============================
-  // INITIAL LOAD
-  // ============================
   useEffect(() => {
-    const loadInitialData = async () => {
+    const loadSummary = async () => {
       setLoading(true)
-      await Promise.all([fetchForecast(), fetchReservations()])
+      await Promise.all([fetchForecast(), fetchAvailable(), fetchFoStats()])
       setLoading(false)
     }
-    loadInitialData()
-  }, [fetchForecast, fetchReservations])
 
-  // ============================
-  // HANDLERS
-  // ============================
+    loadSummary()
+  }, [fetchForecast, fetchAvailable, fetchFoStats])
 
-  // Tab change
+  useEffect(() => {
+    if (viewMode === 'card') {
+      fetchCardBookings()
+      return
+    }
+
+    fetchReservations()
+  }, [viewMode, fetchCardBookings, fetchReservations])
+
   const handleChange = (_event, newValue) => {
     setValue(newValue)
-    setPage(1) // Reset to page 1 on tab change
+    setPage(1)
   }
 
-  // Navigation handlers
   const handleOTA = () => {
     navigate('/transaction/instore', { state: { type: 'ota' } })
   }
@@ -198,7 +252,6 @@ export const UseFrontOffice = () => {
     navigate('/transaction/instore', { state: { type: 'walkin' } })
   }
 
-  // Drawer handlers
   const handleOpenCI = (reservation) => {
     setSelectedReservation(reservation)
     fetchReservationDetail(reservation.guid)
@@ -218,72 +271,64 @@ export const UseFrontOffice = () => {
     setReservationDetails(null)
   }
 
-  // Reload transactions (called after CI/CO success)
   const reloadTransactions = () => {
-    fetchReservations()
+    if (viewMode === 'card') {
+      fetchCardBookings()
+    } else {
+      fetchReservations()
+    }
+
+    fetchFoStats()
     fetchForecast()
   }
 
-  // ============================
-  // RETURN
-  // ============================
+  const tabCounts = {
+    0: foStats.reservations ?? 0,
+    1: foStats.arrivals ?? 0,
+    2: foStats.departures ?? 0,
+    3: foStats.in_house ?? 0
+  }
+
   return {
-    // Loading
     loading,
     loadingTrx,
-
-    // Date display
     formattedDate,
-
-    // Forecast
     forecast,
-
-    // Summary counts
     reservationCount,
     availableCount,
     cancel,
-
-    // Tab
     value,
     handleChange,
-
-    // Date filters
     startDate,
     endDate,
     setStartDate,
     setEndDate,
-
-    // Table data
+    viewMode,
+    setViewMode,
+    search,
+    setSearch,
+    status,
+    setStatus,
+    tabCounts,
     data,
-
-    // Pagination
+    cardData,
     page,
     pageSize,
     totalCount,
     pageCount,
     setPage,
     setPageSize,
-
-    // Drawer states
     openCI,
     openCO,
     selectedReservation,
     ReservationDetails,
-
-    // Drawer handlers
     handleOpenCI,
     handleOpenCO,
     handleCloseDrawer,
-
-    // Navigation
     handleOTA,
     handleGuest,
     handleWalkIn,
-
-    // Reload
     reloadTransactions,
-
-    // Service (passed to drawers)
     frontofficeService
   }
 }

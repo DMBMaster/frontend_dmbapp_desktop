@@ -2,6 +2,7 @@ import {
   LoginPage,
   InfoAppPage,
   HomePage,
+  RatePlanPage,
   ExpensesPage,
   DetailExpensesPage,
   HistoryTransactionPage,
@@ -140,6 +141,13 @@ export const appRoutes = [
   {
     path: '/product/category',
     element: <ProductCategoryPage />,
+    active: true,
+    protected: true,
+    redirectTo: '/login'
+  },
+  {
+    path: '/product/rate-plan',
+    element: <RatePlanPage />,
     active: true,
     protected: true,
     redirectTo: '/login'

@@ -1,4 +1,5 @@
-import { Box, Select } from '@mui/material'
+/* eslint-disable react/prop-types */
+import { Box } from '@mui/material'
 import {
   Button,
   CardContent,
@@ -6,7 +7,9 @@ import {
   Divider,
   Grid,
   IconButton,
+  InputAdornment,
   MenuItem,
+  Select,
   Stack,
   Tab,
   Table,
@@ -17,6 +20,7 @@ import {
   TableRow,
   Tabs,
   TextField,
+  Tooltip,
   Typography
 } from '@mui/material'
 import BlankCard from '@renderer/components/ui/BlankCard'
@@ -30,13 +34,20 @@ import {
   IconChevronRight,
   IconChevronsLeft,
   IconChevronsRight,
+  IconEye,
   IconHome2,
+  IconLayoutList,
+  IconMoon,
+  IconMoodSmile,
+  IconSearch,
   IconUser
 } from '@tabler/icons-react'
+import dayjs from 'dayjs'
 import CheckOutFormDrawer from './components/DrawerCO'
 import { CancelRounded } from '@mui/icons-material'
 import { UseFrontOffice } from './hook/useFrontOffice'
 import { TabContext, TabPanel } from '@mui/lab'
+import { useNavigate } from 'react-router-dom'
 
 function a11yProps(index) {
   return {
@@ -45,11 +56,325 @@ function a11yProps(index) {
   }
 }
 
+// Tab label with count badge
+const TabLabel = ({ label, count }) => (
+  <Box component="span" display="inline-flex" alignItems="center" gap={0.5}>
+    {label}
+    <Box
+      component="span"
+      sx={{
+        fontSize: '0.7rem',
+        bgcolor: 'grey.200',
+        color: 'text.secondary',
+        px: 0.75,
+        borderRadius: '10px',
+        minWidth: 20,
+        textAlign: 'center',
+        lineHeight: 1.6
+      }}
+    >
+      {count ?? 0}
+    </Box>
+  </Box>
+)
+
+const STATUS_OPTIONS = [
+  { label: 'Confirmed', value: 'CONFIRMED' },
+  { label: 'Pending', value: 'PENDING_PAYMENT' },
+  { label: 'Cancelled', value: 'CANCELLED' }
+]
+
+const getBookingMainItem = (reservation) => {
+  if (reservation?.transaction_item?.[0]) {
+    return reservation.transaction_item[0]
+  }
+
+  if (reservation?.items?.[0]) {
+    return reservation.items[0]
+  }
+
+  return null
+}
+
+const formatDateLabel = (value) => {
+  if (!value) return '-'
+
+  const normalizedValue = typeof value === 'string' ? value.replace(' ', 'T') : value
+  const parsedDate = dayjs(normalizedValue)
+
+  return parsedDate.isValid() ? parsedDate.format('DD/MM/YYYY') : '-'
+}
+
+const formatDateTimeLabel = (value) => {
+  if (!value) return '-'
+
+  const normalizedValue = typeof value === 'string' ? value.replace(' ', 'T') : value
+  const parsedDate = dayjs(normalizedValue)
+
+  return parsedDate.isValid() ? parsedDate.format('DD/MM/YYYY HH:mm') : '-'
+}
+
+const calculateNights = (checkInDate, checkOutDate) => {
+  if (!checkInDate || !checkOutDate) return 0
+
+  const nights = dayjs(checkOutDate).diff(dayjs(checkInDate), 'day')
+  return nights >= 0 ? nights : 0
+}
+
+const getBookingStatusMeta = (reservation) => {
+  const status = reservation?.status?.toUpperCase()
+
+  if (['CANCELLED', 'CANCEL', 'EXPIRED'].includes(status)) {
+    return { label: 'Dibatalkan', color: 'error.main' }
+  }
+
+  if (['PENDING_PAYMENT', 'PENDING', 'SUBMIT'].includes(status)) {
+    return { label: 'Belum Bayar', color: 'warning.main' }
+  }
+
+  if (['CHECKED_IN', 'CHECKIN', 'IN-HOUSE', 'IN_HOUSE'].includes(status)) {
+    return { label: 'Check-In', color: 'info.main' }
+  }
+
+  if (['CHECKED_OUT', 'CHECKOUT'].includes(status)) {
+    return { label: 'Check-Out', color: 'secondary.main' }
+  }
+
+  if (['PAID', 'CONFIRMED'].includes(status)) {
+    return { label: 'Sudah Bayar', color: 'success.main' }
+  }
+
+  return { label: reservation?.status || '-', color: 'text.disabled' }
+}
+
+const getReservationSource = (reservation) => {
+  const source = reservation?.channel || reservation?.extranet || '-'
+  return source === 'WALKIN' ? 'Walk In' : source
+}
+
+const BookingCard = ({ reservation, onView, actionLabel }) => {
+  const navigate = useNavigate()
+  const mainItem = getBookingMainItem(reservation)
+  const checkIn = reservation?.check_in || mainItem?.check_in
+  const checkOut = reservation?.check_out || mainItem?.check_out
+  const totalNights = reservation?.nights ?? calculateNights(checkIn, checkOut)
+  const adultQty = reservation?.adult_qty ?? mainItem?.adult_qty ?? 0
+  const childQty = reservation?.child_qty ?? mainItem?.child_qty ?? 0
+  const roomNo = reservation?.room_no ?? mainItem?.room_no ?? '-'
+  const productName = reservation?.product_name || mainItem?.product_name || mainItem?.name || '-'
+  const paidAmount = reservation?.paid ?? reservation?.paid_amount ?? 0
+  const grandTotal = reservation?.grand_total ?? 0
+  const balance = reservation?.balance ?? Math.max(grandTotal - paidAmount, 0)
+  const bookingId =
+    reservation?.reference_id || reservation?.booking_id || reservation?.transaction_no || '-'
+  const bookingDate = reservation?.booking_date || reservation?.created_at
+  const guestName =
+    reservation?.guest_name ||
+    reservation?.reservation_name ||
+    reservation?.ticket?.account_name ||
+    mainItem?.account_name ||
+    '-'
+  const statusMeta = getBookingStatusMeta(reservation)
+
+  return (
+    <Grid size={{ xs: 12, sm: 6, lg: 4, xl: 3 }}>
+      <BlankCard
+        sx={{
+          height: '100%',
+          overflow: 'hidden',
+          borderRadius: 2,
+          bgcolor: 'grey.50',
+          border: '1px solid',
+          borderColor: 'divider'
+        }}
+      >
+        <Box
+          sx={{
+            p: 2,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'flex-start',
+            borderBottom: '1px solid',
+            borderColor: 'divider',
+            bgcolor: 'background.paper'
+          }}
+        >
+          <Box sx={{ minWidth: 0, pr: 2 }}>
+            <Typography variant="subtitle1" fontWeight={700} noWrap>
+              {guestName}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" noWrap>
+              {bookingId}
+            </Typography>
+          </Box>
+          <Box
+            sx={{
+              width: 6,
+              minWidth: 6,
+              height: 34,
+              borderRadius: 4,
+              bgcolor: statusMeta.color
+            }}
+          />
+        </Box>
+
+        <Box sx={{ p: 2, bgcolor: 'grey.100', borderBottom: '1px solid', borderColor: 'divider' }}>
+          <Grid container alignItems="center">
+            <Grid size={{ xs: 5 }}>
+              <Typography variant="subtitle2">{formatDateLabel(checkIn)}</Typography>
+            </Grid>
+            <Grid size={{ xs: 2 }} textAlign="center">
+              <Typography variant="subtitle1" fontWeight={700}>
+                {totalNights}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Nights
+              </Typography>
+            </Grid>
+            <Grid size={{ xs: 5 }} textAlign="right">
+              <Typography variant="subtitle2">{formatDateLabel(checkOut)}</Typography>
+            </Grid>
+          </Grid>
+        </Box>
+
+        <Box sx={{ p: 2 }}>
+          <Stack spacing={1}>
+            <Stack direction="row" justifyContent="space-between" gap={2}>
+              <Typography variant="body2" color="text.secondary">
+                Booking Date
+              </Typography>
+              <Typography variant="body2" textAlign="right">
+                {formatDateTimeLabel(bookingDate)}
+              </Typography>
+            </Stack>
+            <Stack direction="row" justifyContent="space-between" gap={2}>
+              <Typography variant="body2" color="text.secondary">
+                Room / Rate Type
+              </Typography>
+              <Typography variant="body2" textAlign="right">
+                {roomNo} / {productName}
+              </Typography>
+            </Stack>
+            <Stack direction="row" justifyContent="space-between" gap={2}>
+              <Typography variant="body2" color="text.secondary">
+                Channel
+              </Typography>
+              <Typography variant="body2" textAlign="right">
+                {getReservationSource(reservation)}
+              </Typography>
+            </Stack>
+            <Stack direction="row" justifyContent="space-between" gap={2}>
+              <Typography variant="body2" color="text.secondary">
+                Guest
+              </Typography>
+              <Typography variant="body2" textAlign="right">
+                {adultQty} Adult / {childQty} Child
+              </Typography>
+            </Stack>
+          </Stack>
+
+          <Divider sx={{ my: 1.5 }} />
+
+          <Stack spacing={1}>
+            <Stack direction="row" justifyContent="space-between" gap={2}>
+              <Typography variant="body2" color="text.secondary">
+                Total
+              </Typography>
+              <Typography variant="body2">{formatRupiah(grandTotal)}</Typography>
+            </Stack>
+            <Stack direction="row" justifyContent="space-between" gap={2}>
+              <Typography variant="body2" color="text.secondary">
+                Paid
+              </Typography>
+              <Typography variant="body2">{formatRupiah(paidAmount)}</Typography>
+            </Stack>
+            <Stack direction="row" justifyContent="space-between" gap={2}>
+              <Typography variant="body2" color="error.main" fontWeight={700}>
+                Balance
+              </Typography>
+              <Typography variant="body2" color="error.main" fontWeight={700}>
+                {formatRupiah(balance)}
+              </Typography>
+            </Stack>
+          </Stack>
+
+          <Divider sx={{ my: 1.5 }} />
+
+          <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1}>
+            <Stack direction="row" alignItems="center" spacing={1}>
+              <Box
+                sx={{
+                  width: 10,
+                  height: 10,
+                  borderRadius: '50%',
+                  bgcolor: statusMeta.color,
+                  flexShrink: 0
+                }}
+              />
+              <Typography variant="caption" color="text.secondary">
+                {statusMeta.label}
+              </Typography>
+            </Stack>
+            <Stack direction="row" spacing={1} alignItems="center">
+              {onView && reservation?.guid && (
+                <Button size="small" variant="outlined" onClick={() => onView(reservation)}>
+                  {actionLabel}
+                </Button>
+              )}
+              <Tooltip title="Detail">
+                <IconButton
+                  size="small"
+                  onClick={() => navigate(`/transaction/detail/${reservation.guid}`)}
+                >
+                  <IconEye size={18} />
+                </IconButton>
+              </Tooltip>
+            </Stack>
+          </Stack>
+        </Box>
+      </BlankCard>
+    </Grid>
+  )
+}
+
+const ReservationCards = ({ data = [], loading, onView, actionLabel }) => {
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" width="100%" minHeight={160}>
+        <CircularProgress />
+      </Box>
+    )
+  }
+
+  if (!data.length) {
+    return (
+      <Box py={6} textAlign="center">
+        <Typography variant="body1" color="text.secondary">
+          Tidak ada data
+        </Typography>
+      </Box>
+    )
+  }
+
+  return (
+    <Grid container spacing={2}>
+      {data.map((reservation) => (
+        <BookingCard
+          key={reservation.id || reservation.guid}
+          reservation={reservation}
+          onView={onView}
+          actionLabel={actionLabel}
+        />
+      ))}
+    </Grid>
+  )
+}
+
 // ================================
 // RESERVATION TABLE COMPONENT
 // ================================
-// eslint-disable-next-line react/prop-types
 const ReservationTable = ({ data = [], loading }) => {
+  const navigate = useNavigate()
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" p={3}>
@@ -68,33 +393,150 @@ const ReservationTable = ({ data = [], loading }) => {
 
   return (
     <TableContainer>
-      <Table aria-label="reservation table" sx={{ whiteSpace: 'nowrap' }}>
+      <Table aria-label="reservation table">
         <TableHead>
           <TableRow>
-            <TableCell>No</TableCell>
-            <TableCell>Booking ID</TableCell>
-            <TableCell>Nama</TableCell>
-            <TableCell>Room</TableCell>
-            <TableCell>Check-In</TableCell>
-            <TableCell>Check-Out</TableCell>
-            <TableCell>Status</TableCell>
-            <TableCell>Total</TableCell>
+            <TableCell
+              sx={{
+                color: 'text.secondary',
+                fontWeight: 400,
+                fontSize: '0.82rem',
+                border: 0,
+                pb: 0.5
+              }}
+            >
+              Guest
+            </TableCell>
+            <TableCell
+              sx={{
+                color: 'text.secondary',
+                fontWeight: 400,
+                fontSize: '0.82rem',
+                border: 0,
+                pb: 0.5
+              }}
+            >
+              Accommodation
+            </TableCell>
+            <TableCell
+              sx={{
+                color: 'text.secondary',
+                fontWeight: 400,
+                fontSize: '0.82rem',
+                border: 0,
+                pb: 0.5
+              }}
+            >
+              Stay
+            </TableCell>
+            <TableCell
+              sx={{
+                color: 'text.secondary',
+                fontWeight: 400,
+                fontSize: '0.82rem',
+                border: 0,
+                pb: 0.5
+              }}
+            >
+              Status
+            </TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
-          {/* eslint-disable-next-line react/prop-types */}
-          {data.map((item, index) => (
-            <TableRow key={item.guid || index}>
-              <TableCell>{index + 1}</TableCell>
-              <TableCell>{item.booking_id || item.ticket?.booking_id || '-'}</TableCell>
-              <TableCell>{item.reservation_name || item.account_name || '-'}</TableCell>
-              <TableCell>{item.room || item.product_name || '-'}</TableCell>
-              <TableCell>{item.check_in || item.checkin_time || '-'}</TableCell>
-              <TableCell>{item.check_out || item.checkout_time || '-'}</TableCell>
-              <TableCell>{item.status || '-'}</TableCell>
-              <TableCell>{formatRupiah(item.grand_total || 0)}</TableCell>
-            </TableRow>
-          ))}
+          {data.map((item, index) => {
+            const trxItem = getBookingMainItem(item)
+            const roomName = trxItem?.name?.trim() || item.product_name || '-'
+            const source = getReservationSource(item)
+            const guestName =
+              item.guest_name || item.reservation_name || item.ticket?.account_name || '-'
+            const trxNo = item.transaction_no || '-'
+
+            const ciDate = item.check_in || trxItem?.check_in
+            const coDate = item.check_out || trxItem?.check_out
+            const nights = calculateNights(ciDate, coDate)
+            const adults = trxItem?.adult_qty ?? 0
+            const hasBreakfast = trxItem?.breakfast === true
+
+            const ciFormatted = formatDateLabel(ciDate)
+            const coFormatted = formatDateLabel(coDate)
+            const statusCfg = getBookingStatusMeta(item)
+
+            return (
+              <TableRow
+                key={item.guid || index}
+                sx={{
+                  '&:not(:last-child) td': { borderBottom: '1px solid', borderColor: 'divider' }
+                }}
+              >
+                {/* Guest */}
+                <TableCell sx={{ py: 2.5, border: 0, verticalAlign: 'top' }}>
+                  <Typography fontWeight={600} fontSize="0.9rem">
+                    {guestName}
+                  </Typography>
+                  <Typography fontSize="0.78rem" color="text.secondary">
+                    {trxNo}
+                  </Typography>
+                </TableCell>
+
+                {/* Accommodation */}
+                <TableCell sx={{ py: 2.5, border: 0, verticalAlign: 'top' }}>
+                  <Typography fontWeight={600} fontSize="0.9rem" textTransform="uppercase">
+                    {roomName}
+                  </Typography>
+                  <Typography fontSize="0.78rem" color="text.secondary">
+                    {source}
+                  </Typography>
+                </TableCell>
+
+                {/* Stay */}
+                <TableCell sx={{ py: 2.5, border: 0, verticalAlign: 'top', whiteSpace: 'nowrap' }}>
+                  <Typography fontSize="0.88rem">
+                    {ciFormatted} - {coFormatted}
+                  </Typography>
+                  <Stack direction="row" alignItems="center" spacing={1.5} mt={0.5}>
+                    <Stack direction="row" alignItems="center" spacing={0.5}>
+                      <IconMoon size={15} />
+                      <Typography fontSize="0.78rem">{nights}</Typography>
+                    </Stack>
+                    <Stack direction="row" alignItems="center" spacing={0.5}>
+                      <IconUser size={15} />
+                      <Typography fontSize="0.78rem">{adults}</Typography>
+                    </Stack>
+                    {hasBreakfast && (
+                      <Tooltip title="Breakfast included">
+                        <Box display="flex" alignItems="center">
+                          <IconMoodSmile size={15} />
+                        </Box>
+                      </Tooltip>
+                    )}
+                  </Stack>
+                </TableCell>
+
+                {/* Status */}
+                <TableCell sx={{ py: 2.5, border: 0, verticalAlign: 'top' }}>
+                  <Stack direction="row" alignItems="center" spacing={1}>
+                    <Box
+                      sx={{
+                        width: 9,
+                        height: 9,
+                        borderRadius: '50%',
+                        bgcolor: statusCfg.color,
+                        flexShrink: 0
+                      }}
+                    />
+                    <Typography fontSize="0.88rem">{statusCfg.label}</Typography>
+                    <IconButton
+                      size="small"
+                      onClick={() => navigate(`/transaction/detail/${item.guid}`)}
+                      sx={{ ml: 1 }}
+                    >
+                      <IconEye size={18} />
+                    </IconButton>
+                  </Stack>
+                </TableCell>
+              </TableRow>
+            )
+          })}
         </TableBody>
       </Table>
     </TableContainer>
@@ -131,8 +573,24 @@ export const FrontOfficeDashboardPage = () => {
     setStartDate,
     setEndDate,
 
+    // View mode
+    viewMode,
+    setViewMode,
+
+    // Search
+    search,
+    setSearch,
+
+    // Status filter
+    status,
+    setStatus,
+
+    // Tab counts
+    tabCounts,
+
     // Table data
     data,
+    cardData,
 
     // Pagination
     page,
@@ -149,6 +607,8 @@ export const FrontOfficeDashboardPage = () => {
     ReservationDetails,
 
     // Drawer handlers
+    handleOpenCI,
+    handleOpenCO,
     handleCloseDrawer,
 
     // Navigation
@@ -162,6 +622,11 @@ export const FrontOfficeDashboardPage = () => {
     // Service
     frontofficeService
   } = UseFrontOffice()
+
+  // Determine view handler based on active tab
+  // Tab 0=Reservations, 1=Arrivals → Check-In | Tab 2=Departures, 3=In-House → Check-Out
+  const onView = value <= 1 ? handleOpenCI : handleOpenCO
+  const actionLabel = value <= 1 ? 'Check-In' : 'Check-Out'
 
   return (
     <Box sx={{ p: 3 }}>
@@ -261,6 +726,7 @@ export const FrontOfficeDashboardPage = () => {
             onClick={handleOTA}
             variant="contained"
             disableElevation
+            disabled
             color="warning"
             sx={{ mr: 2 }}
           >
@@ -269,6 +735,7 @@ export const FrontOfficeDashboardPage = () => {
           <Button
             onClick={handleGuest}
             variant="contained"
+            disabled
             disableElevation
             color="secondary"
             sx={{ mr: 2 }}
@@ -386,42 +853,51 @@ export const FrontOfficeDashboardPage = () => {
                 >
                   <Tab
                     iconPosition="start"
-                    icon={<IconHome2 size="22" />}
-                    label="Arrivals"
+                    icon={<IconLayoutList size="22" />}
+                    label={<TabLabel label="Reservations" count={tabCounts[0]} />}
                     {...a11yProps(0)}
                   />
                   <Tab
                     iconPosition="start"
-                    icon={<IconBell size="22" />}
-                    label="Departures"
+                    icon={<IconHome2 size="22" />}
+                    label={<TabLabel label="Arrivals" count={tabCounts[1]} />}
                     {...a11yProps(1)}
                   />
                   <Tab
                     iconPosition="start"
-                    icon={<IconBedFlat size="22" />}
-                    label="Stayovers"
+                    icon={<IconBell size="22" />}
+                    label={<TabLabel label="Departures" count={tabCounts[2]} />}
                     {...a11yProps(2)}
                   />
                   <Tab
                     iconPosition="start"
                     icon={<IconBedFlat size="22" />}
-                    label="In-House Guests"
+                    label={<TabLabel label="In-House" count={tabCounts[3]} />}
                     {...a11yProps(3)}
                   />
                 </Tabs>
               </Box>
               <Divider />
-              <Box
-                display="flex"
-                alignItems="center"
-                justifyContent="flex-end"
-                gap={2}
-                mt={2}
-                px={2}
-              >
+              <Box display="flex" alignItems="center" flexWrap="wrap" gap={1.5} mt={2} px={2}>
+                {/* Search */}
+                <TextField
+                  placeholder="Search"
+                  size="small"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <IconSearch size={18} />
+                      </InputAdornment>
+                    )
+                  }}
+                  sx={{ minWidth: 200 }}
+                />
+
                 {/* Start Date Filter */}
                 <TextField
-                  variant="outlined"
+                  size="small"
                   label="Start Date"
                   type="date"
                   InputLabelProps={{ shrink: true }}
@@ -431,27 +907,99 @@ export const FrontOfficeDashboardPage = () => {
 
                 {/* End Date Filter */}
                 <TextField
-                  variant="outlined"
+                  size="small"
                   label="End Date"
                   type="date"
                   InputLabelProps={{ shrink: true }}
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
                 />
+
+                {/* Status Filter Buttons */}
+                {STATUS_OPTIONS.map((option) => (
+                  <Button
+                    key={option.value}
+                    size="small"
+                    variant={status === option.value ? 'contained' : 'outlined'}
+                    color="primary"
+                    disableElevation
+                    onClick={() => setStatus((prev) => (prev === option.value ? '' : option.value))}
+                  >
+                    {option.label}
+                  </Button>
+                ))}
+
+                {/* View Mode Toggle */}
+                <Box sx={{ ml: 'auto', display: 'flex', gap: 1 }}>
+                  <Button
+                    size="small"
+                    variant={viewMode === 'card' ? 'contained' : 'outlined'}
+                    color="primary"
+                    disableElevation
+                    onClick={() => setViewMode('card')}
+                  >
+                    Card View
+                  </Button>
+                  <Button
+                    size="small"
+                    variant={viewMode === 'table' ? 'contained' : 'outlined'}
+                    color="primary"
+                    disableElevation
+                    onClick={() => setViewMode('table')}
+                  >
+                    Table View
+                  </Button>
+                </Box>
               </Box>
 
               <CardContent>
                 <TabPanel value="0">
-                  <ReservationTable data={data} loading={loadingTrx} />
+                  {viewMode === 'card' ? (
+                    <ReservationCards
+                      data={cardData}
+                      loading={loadingTrx}
+                      onView={onView}
+                      actionLabel={actionLabel}
+                    />
+                  ) : (
+                    <ReservationTable data={data} loading={loadingTrx} onView={onView} />
+                  )}
                 </TabPanel>
                 <TabPanel value="1">
-                  <ReservationTable data={data} loading={loadingTrx} />
+                  {viewMode === 'card' ? (
+                    <ReservationCards
+                      data={cardData}
+                      loading={loadingTrx}
+                      onView={onView}
+                      actionLabel={actionLabel}
+                    />
+                  ) : (
+                    <ReservationTable data={data} loading={loadingTrx} onView={onView} />
+                  )}
                 </TabPanel>
                 <TabPanel value="2">
-                  <ReservationTable data={data} loading={loadingTrx} />
+                  {viewMode === 'card' ? (
+                    <ReservationCards
+                      data={cardData}
+                      loading={loadingTrx}
+                      onView={onView}
+                      actionLabel={actionLabel}
+                    />
+                  ) : (
+                    <ReservationTable data={data} loading={loadingTrx} onView={onView} />
+                  )}
                 </TabPanel>
                 <TabPanel value="3">
-                  <ReservationTable data={data} loading={loadingTrx} />
+                  {viewMode === 'card' ? (
+                    <ReservationCards
+                      data={cardData}
+                      loading={loadingTrx}
+                      onView={onView}
+                      actionLabel={actionLabel}
+                    />
+                  ) : (
+                    <ReservationTable data={data} loading={loadingTrx} onView={onView} />
+                  )}
                 </TabPanel>
               </CardContent>
             </TabContext>
@@ -487,19 +1035,19 @@ export const FrontOfficeDashboardPage = () => {
                   <IconChevronLeft />
                 </IconButton>
                 <Typography color="textPrimary">
-                  Page {page} of {pageCount}
+                  Page {page} of {Math.max(pageCount, 1)}
                 </Typography>
                 <IconButton
                   size="small"
                   onClick={() => setPage((prev) => prev + 1)}
-                  disabled={page === pageCount}
+                  disabled={page >= Math.max(pageCount, 1)}
                 >
                   <IconChevronRight />
                 </IconButton>
                 <IconButton
                   size="small"
-                  onClick={() => setPage(pageCount)}
-                  disabled={page === pageCount}
+                  onClick={() => setPage(Math.max(pageCount, 1))}
+                  disabled={page >= Math.max(pageCount, 1)}
                 >
                   <IconChevronsRight />
                 </IconButton>

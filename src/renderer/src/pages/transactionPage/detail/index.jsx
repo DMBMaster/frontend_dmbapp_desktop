@@ -321,7 +321,7 @@ export const DetailTransactionPage = () => {
               </Stack>
 
               <Grid container spacing={2}>
-                <Grid size={{ xs: 12, sm: 6, md: 4, lg: 1 }}>
+                <Grid size={{ xs: 12, sm: 6, md: 4, lg: 2 }}>
                   <Typography variant="body1" mb={1}>
                     Check In
                   </Typography>
@@ -329,7 +329,7 @@ export const DetailTransactionPage = () => {
                     {formatDate(transactionDetail?.check_in)}
                   </Typography>
                 </Grid>
-                <Grid size={{ xs: 12, sm: 6, md: 4, lg: 1 }}>
+                <Grid size={{ xs: 12, sm: 6, md: 4, lg: 2 }}>
                   <Typography variant="body1" mb={1}>
                     Check Out
                   </Typography>
@@ -345,7 +345,7 @@ export const DetailTransactionPage = () => {
                     {calculateNights(transactionDetail?.check_in, transactionDetail?.check_out)}
                   </Typography>
                 </Grid>
-                <Grid size={{ xs: 12, sm: 6, md: 4, lg: 1 }}>
+                <Grid size={{ xs: 12, sm: 6, md: 4, lg: 2 }}>
                   <Typography variant="body1" mb={1}>
                     Reservation Date
                   </Typography>
@@ -374,7 +374,7 @@ export const DetailTransactionPage = () => {
                                         1232131
                                     </Typography>
                                 </Grid> */}
-                <Grid size={{ xs: 12, sm: 6, md: 4, lg: 1 }}>
+                <Grid size={{ xs: 12, sm: 6, md: 4, lg: 2 }}>
                   <Typography variant="body1" mb={1}>
                     Source
                   </Typography>
