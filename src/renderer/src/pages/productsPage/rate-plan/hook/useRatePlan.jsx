@@ -83,7 +83,7 @@ export const UseRatePlan = () => {
 
     try {
       if (openDialog.update && selectedRow) {
-        await ratePlanService.updateRatePlan(selectedRow.id, formData)
+        await ratePlanService.updateRatePlan(selectedRow.guid, formData)
         notifier.show({
           message: 'Berhasil Memperbarui Rate Plan',
           description: 'Rate Plan berhasil diperbarui.',
