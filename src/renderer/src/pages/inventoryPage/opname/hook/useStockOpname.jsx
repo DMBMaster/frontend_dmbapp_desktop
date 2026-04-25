@@ -11,7 +11,7 @@ import {
 } from '@tanstack/react-table'
 import { IconButton, Typography } from '@mui/material'
 import { usePermissions } from '@renderer/store/usePermission'
-import PurchaseService from '@renderer/services/purchaseService'
+import StockOpnameService from '@renderer/services/stockOpnameService'
 import ExpandLessIcon from '@mui/icons-material/ExpandLess'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import ProductImageCell from '../components/showImage'
@@ -20,7 +20,7 @@ const columnHelper = createColumnHelper()
 
 export const UseStockOpname = () => {
   const notifier = useNotifier()
-  const purchaseService = PurchaseService()
+  const stockOpnameService = StockOpnameService()
 
   const [data, setData] = useState([])
   const permissions = usePermissions(userRole)
@@ -66,7 +66,7 @@ export const UseStockOpname = () => {
         outlet_id: selectedOutlet?.guid || null,
         category: 'opname'
       }
-      const response = await purchaseService.getPurchaseOrder(params)
+      const response = await stockOpnameService.getStockOpname(params)
       const responseData = response.data || []
       const meta = response.meta
 
@@ -96,7 +96,7 @@ export const UseStockOpname = () => {
     } finally {
       setLoading((prev) => ({ ...prev, fetchData: false }))
     }
-  }, [purchaseService, pageParams.page, pageParams.pageSize, debouncedSearch])
+  }, [stockOpnameService, pageParams.page, pageParams.pageSize, debouncedSearch])
 
   const columns = [
     columnHelper.accessor('rowIndex', {

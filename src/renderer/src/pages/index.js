@@ -22,6 +22,7 @@ import { CreatePurchaseRequestPage } from './inventoryPage/purchase/request/crea
 import { UpdatePurchaseRequestPage } from './inventoryPage/purchase/request/edit'
 import { PurchaseOrderPage } from './inventoryPage/purchase/order'
 import { StockOpnamePage } from './inventoryPage/opname'
+import { CreateStockOpnamePage } from './inventoryPage/opname/create'
 import { CreatePurchaseOrderPage } from './inventoryPage/purchase/order/create'
 import { SupplierPage } from './inventoryPage/supplier'
 import { StockRotationPage } from './inventoryPage/stock/rotation'
@@ -60,6 +61,7 @@ export {
   PurchaseOrderPage,
   CreatePurchaseOrderPage,
   StockOpnamePage,
+  CreateStockOpnamePage,
   SupplierPage,
   StockRotationPage,
   StockMovementPage,

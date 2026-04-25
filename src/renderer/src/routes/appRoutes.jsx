@@ -23,6 +23,7 @@ import {
   UpdatePurchaseRequestPage,
   PurchaseOrderPage,
   StockOpnamePage,
+  CreateStockOpnamePage,
   CreatePurchaseOrderPage,
   SupplierPage,
   StockRotationPage,
@@ -224,6 +225,13 @@ export const appRoutes = [
   {
     path: '/inventory/opname',
     element: <StockOpnamePage />,
+    active: true,
+    protected: true,
+    redirectTo: '/login'
+  },
+  {
+    path: '/inventory/opname/create',
+    element: <CreateStockOpnamePage />,
     active: true,
     protected: true,
     redirectTo: '/login'
