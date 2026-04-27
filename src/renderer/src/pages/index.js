@@ -32,6 +32,7 @@ import { ProductCategoryPage } from './productsPage/category'
 import { RatePlanPage } from './productsPage/rate-plan'
 import { TransactionActivityPage } from './otherPage/transactionActivity'
 import { RoomActivityPage } from './settingPage/room/activity'
+import { SettingReceiptPage } from './settingPage/receipt'
 import { UnitPage } from './otherPage/satuan'
 import { ReportFarmPage } from './reportPage/farm'
 
@@ -70,6 +71,7 @@ export {
   RatePlanPage,
   TransactionActivityPage,
   RoomActivityPage,
+  SettingReceiptPage,
   UnitPage,
   ReportFarmPage
 }

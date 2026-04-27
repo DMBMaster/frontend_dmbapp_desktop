@@ -32,6 +32,7 @@ import {
   ProductCategoryPage,
   TransactionActivityPage,
   RoomActivityPage,
+  SettingReceiptPage,
   UnitPage,
   ReportFarmPage
 } from '@renderer/pages'
@@ -270,6 +271,13 @@ export const appRoutes = [
   {
     path: '/setting/rooms/activity',
     element: <RoomActivityPage />,
+    active: true,
+    protected: true,
+    redirectTo: '/login'
+  },
+  {
+    path: '/setting/receipt',
+    element: <SettingReceiptPage />,
     active: true,
     protected: true,
     redirectTo: '/login'
