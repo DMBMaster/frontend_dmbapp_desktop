@@ -3,6 +3,7 @@ import { useDropzone } from 'react-dropzone'
 // Services
 import CartService from '@renderer/services/cartService'
 import ProductService from '@renderer/services/productService'
+import ReceiptService from '@renderer/services/receiptService'
 import { useNetworkStore } from '@renderer/store/networkStore'
 import { formatRupiah, parseCurrencyToNumber } from '@renderer/utils/myFunctions'
 import { useNotifier } from '@renderer/components/core/NotificationProvider'
@@ -16,6 +17,7 @@ export const useCreateTransaction = () => {
   const cartService = CartService()
   const mediaService = MediaService()
   const productService = ProductService()
+  const receiptService = ReceiptService()
 
   // Network status
   const isOnline = useNetworkStore((state) => state.isOnline)
@@ -53,6 +55,7 @@ export const useCreateTransaction = () => {
   const [selectedSatuanId, setSelectedSatuanId] = useState(null)
   const [isSatuanReadonly, setIsSatuanReadonly] = useState(false)
   const [satuanName, setSatuanName] = useState('')
+  const [selectedVariants, setSelectedVariants] = useState({})
 
   // Room selection (for hotel/kos)
   const [selectedRoomId, setSelectedRoomId] = useState(null)
@@ -98,6 +101,7 @@ export const useCreateTransaction = () => {
     open: false,
     dataToprint: null
   })
+  const [receiptSettings, setReceiptSettings] = useState(null)
 
   // Pagination
   const [page, setPage] = useState(1)
@@ -112,6 +116,49 @@ export const useCreateTransaction = () => {
     tomorrow.setDate(tomorrow.getDate() + 1)
     return tomorrow.toISOString().split('T')[0]
   }
+
+  const getMerchantId = () => localStorage.getItem('outletGuid') || localStorage.getItem('outletId')
+
+  const getReceiptSettingsSafe = useCallback(() => {
+    const cachedSettings = receiptService.getCachedReceiptSettings()
+    if (cachedSettings) return cachedSettings
+
+    return {
+      paperSize: 'MM58',
+      printLimit: false,
+      maxPrintCount: 1,
+      showBusinessName: true,
+      showOutletName: true,
+      showAddress: true,
+      showPhone: false,
+      showCustomer: true,
+      showCashierPaymentName: true,
+      showTransactionTime: true,
+      showUnitPrice: true,
+      showNotes: true,
+      customFooterText: false,
+      footerText: ''
+    }
+  }, [receiptService])
+
+  const fetchReceiptSettingsForPrint = useCallback(async () => {
+    const cachedSettings = receiptService.getCachedReceiptSettings()
+
+    if (!isOnline) {
+      setReceiptSettings(cachedSettings || getReceiptSettingsSafe())
+      return
+    }
+
+    try {
+      const response = await receiptService.getReceiptSettings({
+        merchant_id: getMerchantId() || undefined
+      })
+      setReceiptSettings(response?.data || cachedSettings || getReceiptSettingsSafe())
+    } catch (error) {
+      console.error('Error fetching receipt settings for print:', error)
+      setReceiptSettings(cachedSettings || getReceiptSettingsSafe())
+    }
+  }, [getReceiptSettingsSafe, isOnline, receiptService])
 
   // ================================
   // DATA FETCHING
@@ -146,7 +193,7 @@ export const useCreateTransaction = () => {
         outletId: localStorage.getItem('outletGuid') || '',
         ...(searchTermProduct && { search: searchTermProduct })
       }
-      const response = await productService.getProducts(params)
+      const response = await productService.getProductsV2(params)
       setProducts(response.data || [])
     } catch (error) {
       console.error('Error fetching products:', error)
@@ -223,7 +270,7 @@ export const useCreateTransaction = () => {
 
   const handleProductChange = (_event, newValue) => {
     setSelectedProduct(newValue)
-
+    setSelectedVariants({})
     if (newValue) {
       setPrice(newValue.price_walkin || newValue.price)
 
@@ -303,7 +350,8 @@ export const useCreateTransaction = () => {
         note: '',
         ...(customer?.id && { customer_id: customer.id }),
         ...(selectedRoomId && { no_room: [selectedRoomId] }),
-        product_satuan_id: selectedSatuanId === 999 ? null : selectedSatuanId
+        product_satuan_id: selectedSatuanId === 999 ? null : selectedSatuanId,
+        variants: Object.values(selectedVariants).filter(Boolean)
       }
 
       // Build product info for offline display
@@ -327,6 +375,7 @@ export const useCreateTransaction = () => {
       setPrice(0)
       setSelectedSatuanId(null)
       setSelectedRoomId(null)
+      setSelectedVariants({})
 
       if (response.offline) {
         notifier.show({
@@ -530,11 +579,31 @@ export const useCreateTransaction = () => {
     return true
   }
 
-  const buildPrintPayloadFromCart = () => {
+  const buildPrintPayloadFromCart = (checkoutResponse = {}) => {
+    const receiptConfig = receiptSettings || getReceiptSettingsSafe()
+    const transactionNo =
+      checkoutResponse?.data?.note_number ||
+      checkoutResponse?.data?.order_number ||
+      checkoutResponse?.data?.invoice_no ||
+      checkoutResponse?.results?.note_number ||
+      checkoutResponse?.results?.order_number ||
+      checkoutResponse?.results?.invoice_no ||
+      ''
+
+    const transactionDate =
+      checkoutResponse?.data?.created_at ||
+      checkoutResponse?.results?.created_at ||
+      new Date().toISOString()
+
     const items = cartItems.map((item) => ({
       productName: item.product_name,
       quantity: item.qty,
-      price: item.price,
+      price: Number(item.price || 0),
+      variants: (item.variants || '')
+        .split(',')
+        .map((value) => value.trim())
+        .filter(Boolean)
+        .join(', '),
       notes: item.note || ''
     }))
 
@@ -561,10 +630,19 @@ export const useCreateTransaction = () => {
           : 'Debit/Credit'
 
     return {
+      businessName:
+        localStorage.getItem('merchantName') || localStorage.getItem('outletName') || '',
       outletName: localStorage.getItem('outletName') || 'Outlet',
       outletAddress: localStorage.getItem('outletAddress') || '',
-      invoiceNo: '',
-      invoiceDate: '',
+      phone: localStorage.getItem('outletPhone') || '',
+      city: localStorage.getItem('outletCity') || '',
+      province: localStorage.getItem('outletProvince') || '',
+      country: localStorage.getItem('outletCountry') || '',
+      email: localStorage.getItem('outletEmail') || '',
+      invoiceNo: transactionNo,
+      orderNumber: transactionNo,
+      invoiceDate: transactionDate,
+      orderType: 'WALK IN',
       customerName: customer?.full_name || customerName || 'Umum',
       cashierName: localStorage.getItem('userName') || '',
       items,
@@ -576,7 +654,7 @@ export const useCreateTransaction = () => {
       amountPaid: paid,
       change: changeVal,
       notes: notes || '',
-      footer: 'Thank You For Coming !!!'
+      footer: receiptConfig?.footerText || 'Thank You For Coming !!!'
     }
   }
 
@@ -612,7 +690,7 @@ export const useCreateTransaction = () => {
         payload.discount_nominal = parseFloat(discountAmount) || 0
       }
 
-      await cartService.checkout(payload)
+      const checkoutResponse = await cartService.checkout(payload)
       notifier.show({
         message: !isOnline ? 'Tersimpan Offline' : 'Sukses',
         description: !isOnline
@@ -621,14 +699,21 @@ export const useCreateTransaction = () => {
         severity: 'success'
       })
 
-      const printOrder = buildPrintPayloadFromCart()
+      const activeReceiptSettings = receiptSettings || getReceiptSettingsSafe()
+      const printOrder = buildPrintPayloadFromCart(checkoutResponse)
+      const maxPrintCount = Number(activeReceiptSettings?.maxPrintCount || 1)
+      const copies = activeReceiptSettings?.printLimit ? Math.max(1, maxPrintCount) : 1
+
       const dataToprint = {
         header1: '',
         header2: '',
         header3: '',
-        contentHTML: buildReceiptHTML(printOrder),
+        contentHTML: buildReceiptHTML(printOrder, activeReceiptSettings),
         footer1: '',
-        footer2: ''
+        footer2: '',
+        paperSize: activeReceiptSettings?.paperSize || 'MM58',
+        copies,
+        receiptSettings: activeReceiptSettings
       }
 
       // Open preview dialog — user can choose to print or skip
@@ -692,6 +777,7 @@ export const useCreateTransaction = () => {
     fetchBankOptions()
     fetchRooms()
     fetchCommissionStatus()
+    fetchReceiptSettingsForPrint()
   }, [])
 
   // ================================
@@ -740,6 +826,8 @@ export const useCreateTransaction = () => {
     isSatuanReadonly,
     handleProductChange,
     handleSatuanChange,
+    selectedVariants,
+    setSelectedVariants,
 
     // Room
     selectedRoomId,

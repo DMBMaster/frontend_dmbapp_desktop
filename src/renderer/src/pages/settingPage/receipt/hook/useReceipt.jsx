@@ -3,6 +3,8 @@ import ReceiptService from '@renderer/services/receiptService'
 import { useNetworkStore } from '@renderer/store/networkStore'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
+const getMerchantId = () => localStorage.getItem('outletGuid') || localStorage.getItem('outletId')
+
 const createDefaultSettings = (initialData = {}) => {
   const printData = initialData?.printData || {}
 
@@ -57,12 +59,123 @@ const createDefaultSettings = (initialData = {}) => {
     orderNumberQR: initialData?.orderNumberQR ?? false,
     electronicBarcode: initialData?.electronicBarcode ?? false,
 
+    showWifi: initialData?.showWifi ?? printData?.showWifi ?? false,
+    wifiName: initialData?.wifiName ?? printData?.wifiName ?? '',
+    wifiPassword: initialData?.wifiPassword ?? printData?.wifiPassword ?? '',
+    showRoomPin: initialData?.showRoomPin ?? printData?.showRoomPin ?? false,
+    showBreakfast: initialData?.showBreakfast ?? printData?.showBreakfast ?? false,
+
     showSocialMedia: initialData?.showSocialMedia ?? false,
     socialMedia: Array.isArray(initialData?.socialMedia)
       ? initialData.socialMedia
       : Array.isArray(printData?.socialMedia)
         ? printData.socialMedia
         : []
+  }
+}
+
+const normalizeSocialMedia = (socialMedia = []) => {
+  if (!Array.isArray(socialMedia)) return []
+
+  return socialMedia
+    .map((item) => ({
+      platform: String(item?.platform || '').trim(),
+      username: String(item?.username || '').trim()
+    }))
+    .filter((item) => item.platform || item.username)
+}
+
+const buildSocialMediaBreakdown = (socialMedia = []) => {
+  const byPlatform = socialMedia.reduce((acc, item) => {
+    const key = (item.platform || 'OTHER').toUpperCase()
+    if (!acc[key]) acc[key] = []
+    acc[key].push(item.username || '')
+    return acc
+  }, {})
+
+  const lines = socialMedia.map((item) => `${item.platform || 'OTHER'}: ${item.username || ''}`)
+
+  return {
+    byPlatform,
+    lines
+  }
+}
+
+const buildSavePayload = (settings) => {
+  const merchantId = getMerchantId()
+  const socialMedia = settings.showSocialMedia ? normalizeSocialMedia(settings.socialMedia) : []
+
+  return {
+    merchant_id: merchantId,
+    printData: {
+      headerText: settings.headerText || '',
+      footerText: settings.footerText || '',
+      qr: {
+        type: settings.qrType || 'LINK_URL',
+        title: settings.qrTitle || '',
+        link: settings.qrLink || '',
+        hideLink: Boolean(settings.hideQRLink)
+      },
+      webQR: {
+        title: settings.webQRTitle || '',
+        hideLink: Boolean(settings.hideWebQRLink)
+      },
+      socialMedia,
+      socialMediaBreakdown: buildSocialMediaBreakdown(socialMedia),
+      showWifi: Boolean(settings.showWifi),
+      wifiName: settings.wifiName || '',
+      wifiPassword: settings.wifiPassword || '',
+      showRoomPin: Boolean(settings.showRoomPin),
+      showBreakfast: Boolean(settings.showBreakfast)
+    },
+    showWifi: Boolean(settings.showWifi),
+    wifiName: settings.wifiName || '',
+    wifiPassword: settings.wifiPassword || '',
+    showRoomPin: Boolean(settings.showRoomPin),
+    showBreakfast: Boolean(settings.showBreakfast),
+    printLimit: Boolean(settings.printLimit),
+    maxPrintCount: Number(settings.maxPrintCount || 1),
+    paperSize: settings.paperSize || 'MM58',
+    showLogo: Boolean(settings.showLogo),
+    showBusinessName: Boolean(settings.showBusinessName),
+    showOutletName: Boolean(settings.showOutletName),
+    showAddress: Boolean(settings.showAddress),
+    showCity: Boolean(settings.showCity),
+    showProvince: Boolean(settings.showProvince),
+    showCountry: Boolean(settings.showCountry),
+    showEmail: Boolean(settings.showEmail),
+    showPhone: Boolean(settings.showPhone),
+    customHeaderText: Boolean(settings.customHeaderText),
+    headerText: settings.headerText || '',
+    showNoteNumber: Boolean(settings.showNoteNumber),
+    showTransactionTime: Boolean(settings.showTransactionTime),
+    showOrderNumber: Boolean(settings.showOrderNumber),
+    showCashierOrderName: Boolean(settings.showCashierOrderName),
+    showCashierPaymentName: Boolean(settings.showCashierPaymentName),
+    showCustomer: Boolean(settings.showCustomer),
+    showOwnership: Boolean(settings.showOwnership),
+    showServedBy: Boolean(settings.showServedBy),
+    showOrderType: Boolean(settings.showOrderType),
+    showOrderName: Boolean(settings.showOrderName),
+    showTableNumber: Boolean(settings.showTableNumber),
+    showUnitPrice: Boolean(settings.showUnitPrice),
+    showEmployeeCommission: Boolean(settings.showEmployeeCommission),
+    showExtras: Boolean(settings.showExtras),
+    showSerialNumber: Boolean(settings.showSerialNumber),
+    showNotes: Boolean(settings.showNotes),
+    customFooterText: Boolean(settings.customFooterText),
+    footerText: settings.footerText || '',
+    customQR: Boolean(settings.customQR),
+    qrType: settings.qrType || 'LINK_URL',
+    qrTitle: settings.qrTitle || '',
+    qrLink: settings.qrLink || '',
+    hideQRLink: Boolean(settings.hideQRLink),
+    webQR: Boolean(settings.webQR),
+    webQRTitle: settings.webQRTitle || '',
+    hideWebQRLink: Boolean(settings.hideWebQRLink),
+    orderNumberQR: Boolean(settings.orderNumberQR),
+    electronicBarcode: Boolean(settings.electronicBarcode),
+    socialMedia
   }
 }
 
@@ -84,7 +197,10 @@ export const UseReceipt = () => {
     setError('')
 
     try {
-      const response = await receiptService.getReceiptSettings()
+      const params = {
+        merchant_id: getMerchantId() || undefined
+      }
+      const response = await receiptService.getReceiptSettings(params)
       setSettings(createDefaultSettings(response?.data || {}))
     } catch (apiError) {
       console.error(apiError)
@@ -159,7 +275,8 @@ export const UseReceipt = () => {
     setLoading((prev) => ({ ...prev, saveData: true }))
 
     try {
-      await receiptService.saveReceiptSettings(settings)
+      const payload = buildSavePayload(settings)
+      await receiptService.saveReceiptSettings(payload)
       notifier.show({
         message: 'Berhasil disimpan',
         description: 'Pengaturan struk berhasil diperbarui.',

@@ -507,6 +507,42 @@ export const ReceiptSettingsForm = ({
                 Informasi Lainnya
               </Typography>
               <SettingItem
+                label="Tampilkan Wifi"
+                checked={settings.showWifi}
+                onChange={() => onToggle('showWifi')}
+              />
+              {settings.showWifi && (
+                <Grid container spacing={1.25} sx={{ mt: 0.8, mb: 0.8 }}>
+                  <Grid size={{ xs: 12, md: 6 }}>
+                    <TextField
+                      fullWidth
+                      label="Nama Wifi"
+                      value={settings.wifiName}
+                      onChange={(e) => onInput('wifiName', e.target.value)}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, md: 6 }}>
+                    <TextField
+                      fullWidth
+                      label="Password Wifi"
+                      value={settings.wifiPassword}
+                      onChange={(e) => onInput('wifiPassword', e.target.value)}
+                    />
+                  </Grid>
+                </Grid>
+              )}
+              <SettingItem
+                label="PIN Kamar"
+                checked={settings.showRoomPin}
+                onChange={() => onToggle('showRoomPin')}
+              />
+              <SettingItem
+                label="Voucher Breakfast"
+                checked={settings.showBreakfast}
+                onChange={() => onToggle('showBreakfast')}
+              />
+
+              <SettingItem
                 label="Media Sosial"
                 checked={settings.showSocialMedia}
                 onChange={() => onToggle('showSocialMedia')}

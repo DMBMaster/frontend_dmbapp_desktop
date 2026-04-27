@@ -34,7 +34,8 @@ import {
   Chip,
   Badge,
   Tooltip,
-  InputAdornment
+  InputAdornment,
+  FormHelperText
 } from '@mui/material'
 import {
   IconChevronLeft,
@@ -114,6 +115,8 @@ export const CreateTransactionPage = () => {
     isSatuanReadonly,
     handleProductChange,
     handleSatuanChange,
+    selectedVariants,
+    setSelectedVariants,
 
     // Employee
     selectedEmployees,
@@ -183,6 +186,24 @@ export const CreateTransactionPage = () => {
   const [productKeyword, setProductKeyword] = useState('')
   const [checkoutExpanded, setCheckoutExpanded] = useState(false)
 
+  const variantGroups = useMemo(() => selectedProduct?.variants || [], [selectedProduct])
+  const requiredVariantGroups = useMemo(
+    () => variantGroups.filter((variant) => variant.is_required),
+    [variantGroups]
+  )
+  const missingRequiredVariants = useMemo(
+    () =>
+      requiredVariantGroups.filter(
+        (variant) => !selectedVariants[variant.id] && selectedVariants[variant.id] !== 0
+      ),
+    [requiredVariantGroups, selectedVariants]
+  )
+  const hasIncompleteRequiredVariants = missingRequiredVariants.length > 0
+  const selectedVariantCount = useMemo(
+    () => variantGroups.filter((variant) => Boolean(selectedVariants[variant.id])).length,
+    [variantGroups, selectedVariants]
+  )
+
   const filteredProductCards = useMemo(() => {
     if (!productKeyword) return products
     const keyword = productKeyword.toLowerCase()
@@ -196,8 +217,30 @@ export const CreateTransactionPage = () => {
     return getImgUrl(rawImage)
   }
 
-  // Check if add button should be disabled
-  const isAddDisabled = !selectedProduct || quantity <= 0 || loading.addToCart
+  const formatCartVariants = (variants) => {
+    if (!variants) return ''
+
+    if (Array.isArray(variants)) {
+      return variants
+        .map((item) => (typeof item === 'string' ? item : item?.name || item?.label || ''))
+        .map((item) => item.trim())
+        .filter(Boolean)
+        .join(', ')
+    }
+
+    if (typeof variants === 'string') {
+      return variants
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean)
+        .join(', ')
+    }
+
+    return ''
+  }
+
+  const isAddDisabled =
+    !selectedProduct || quantity <= 0 || loading.addToCart || hasIncompleteRequiredVariants
 
   const isCheckoutDisabled = useMemo(() => {
     if (loading.submit || cartItems.length === 0) return true
@@ -490,97 +533,202 @@ export const CreateTransactionPage = () => {
                   bgcolor: 'primary.50'
                 }}
               >
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} alignItems="center">
-                  {/* Product info */}
-                  <Box flex={1} minWidth={0}>
-                    <Typography variant="subtitle2" noWrap fontWeight={700}>
-                      {selectedProduct.name}
-                    </Typography>
-                    <Typography variant="caption" color="primary.main" fontWeight={600}>
-                      {formatRupiah(price)}
-                    </Typography>
-                  </Box>
-
-                  {/* Clear selection */}
-                  <IconButton
-                    size="small"
-                    onClick={() => {
-                      handleProductChange(null, null)
-                      setQuantity(1)
-                    }}
-                    title="Batalkan pilihan"
-                    sx={{ color: 'text.secondary', flexShrink: 0 }}
+                <Stack spacing={1.5}>
+                  <Stack
+                    direction={{ xs: 'column', sm: 'row' }}
+                    spacing={1.5}
+                    alignItems={{ xs: 'stretch', sm: 'center' }}
                   >
-                    <IconX size={16} />
-                  </IconButton>
+                    {/* Product info */}
+                    <Box flex={1} minWidth={0}>
+                      <Typography variant="subtitle2" noWrap fontWeight={700}>
+                        {selectedProduct.name}
+                      </Typography>
+                      <Typography variant="caption" color="primary.main" fontWeight={600}>
+                        {formatRupiah(price)}
+                      </Typography>
+                    </Box>
 
-                  {/* Satuan */}
-                  <Box width={130}>
-                    {isSatuanReadonly ? (
-                      <TextField
-                        label="Satuan"
-                        value={satuanName}
+                    {/* Clear selection */}
+                    <IconButton
+                      size="small"
+                      onClick={() => {
+                        handleProductChange(null, null)
+                        setQuantity(1)
+                      }}
+                      title="Batalkan pilihan"
+                      sx={{
+                        color: 'text.secondary',
+                        flexShrink: 0,
+                        alignSelf: { xs: 'flex-end', sm: 'center' }
+                      }}
+                    >
+                      <IconX size={16} />
+                    </IconButton>
+
+                    {/* Satuan */}
+                    <Box width={{ xs: '100%', sm: 150 }}>
+                      {isSatuanReadonly ? (
+                        <TextField
+                          label="Satuan"
+                          value={satuanName}
+                          size="small"
+                          disabled
+                          fullWidth
+                        />
+                      ) : (
+                        <Autocomplete
+                          value={
+                            productSatuanList.find((item) => item.id === selectedSatuanId) || null
+                          }
+                          onChange={handleSatuanChange}
+                          options={productSatuanList}
+                          getOptionLabel={(option) => option.satuan?.name || ''}
+                          isOptionEqualToValue={(option, value) => option.id === value?.id}
+                          renderInput={(params) => (
+                            <TextField {...params} label="Satuan" size="small" fullWidth />
+                          )}
+                        />
+                      )}
+                    </Box>
+
+                    {/* Qty stepper */}
+                    <Stack direction="row" alignItems="center" spacing={0.5}>
+                      <IconButton
                         size="small"
-                        disabled
-                        fullWidth
+                        onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                        sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1 }}
+                      >
+                        <IconMinus size={14} />
+                      </IconButton>
+                      <TextField
+                        value={quantity}
+                        onChange={(e) => setQuantity(Math.max(1, Number(e.target.value) || 1))}
+                        size="small"
+                        type="number"
+                        inputProps={{ min: 1, style: { textAlign: 'center', width: 48 } }}
+                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1 } }}
                       />
-                    ) : (
-                      <Autocomplete
-                        value={
-                          productSatuanList.find((item) => item.id === selectedSatuanId) || null
-                        }
-                        onChange={handleSatuanChange}
-                        options={productSatuanList}
-                        getOptionLabel={(option) => option.satuan?.name || ''}
-                        isOptionEqualToValue={(option, value) => option.id === value?.id}
-                        renderInput={(params) => (
-                          <TextField {...params} label="Satuan" size="small" fullWidth />
-                        )}
-                      />
-                    )}
-                  </Box>
+                      <IconButton
+                        size="small"
+                        onClick={() => setQuantity(quantity + 1)}
+                        sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1 }}
+                      >
+                        <IconPlus size={14} />
+                      </IconButton>
+                    </Stack>
 
-                  {/* Qty stepper */}
-                  <Stack direction="row" alignItems="center" spacing={0.5}>
-                    <IconButton
-                      size="small"
-                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                      sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1 }}
+                    {/* Add button */}
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      onClick={handleAddToCart}
+                      disabled={isAddDisabled}
+                      startIcon={loading.addToCart ? null : <IconShoppingCart size={16} />}
+                      sx={{ height: 40, minWidth: 140, borderRadius: 2, fontWeight: 700 }}
                     >
-                      <IconMinus size={14} />
-                    </IconButton>
-                    <TextField
-                      value={quantity}
-                      onChange={(e) => setQuantity(Math.max(1, Number(e.target.value) || 1))}
-                      size="small"
-                      type="number"
-                      inputProps={{ min: 1, style: { textAlign: 'center', width: 48 } }}
-                      sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1 } }}
-                    />
-                    <IconButton
-                      size="small"
-                      onClick={() => setQuantity(quantity + 1)}
-                      sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1 }}
-                    >
-                      <IconPlus size={14} />
-                    </IconButton>
+                      {loading.addToCart ? (
+                        <CircularProgress size={18} color="inherit" />
+                      ) : (
+                        'Tambah ke Cart'
+                      )}
+                    </Button>
                   </Stack>
 
-                  {/* Add button */}
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    onClick={handleAddToCart}
-                    disabled={isAddDisabled}
-                    startIcon={loading.addToCart ? null : <IconShoppingCart size={16} />}
-                    sx={{ height: 40, minWidth: 120, borderRadius: 2, fontWeight: 700 }}
-                  >
-                    {loading.addToCart ? (
-                      <CircularProgress size={18} color="inherit" />
-                    ) : (
-                      'Tambah ke Cart'
-                    )}
-                  </Button>
+                  {/* Variants */}
+                  {variantGroups.length > 0 && (
+                    <Box
+                      sx={{
+                        p: 1.5,
+                        borderRadius: 1.5,
+                        border: '1px dashed',
+                        borderColor: hasIncompleteRequiredVariants ? 'warning.main' : 'divider',
+                        bgcolor: hasIncompleteRequiredVariants ? 'warning.50' : 'background.paper'
+                      }}
+                    >
+                      <Stack
+                        direction={{ xs: 'column', sm: 'row' }}
+                        spacing={1}
+                        justifyContent="space-between"
+                        alignItems={{ xs: 'flex-start', sm: 'center' }}
+                        mb={1}
+                      >
+                        <Typography variant="caption" fontWeight={700}>
+                          Pilihan Varian
+                        </Typography>
+                        <Stack direction="row" spacing={0.75}>
+                          <Chip
+                            label={`${selectedVariantCount}/${variantGroups.length} dipilih`}
+                            size="small"
+                            color={selectedVariantCount > 0 ? 'primary' : 'default'}
+                          />
+                          {requiredVariantGroups.length > 0 && (
+                            <Chip
+                              label={`${requiredVariantGroups.length} wajib`}
+                              size="small"
+                              color={hasIncompleteRequiredVariants ? 'warning' : 'success'}
+                              variant={hasIncompleteRequiredVariants ? 'filled' : 'outlined'}
+                            />
+                          )}
+                        </Stack>
+                      </Stack>
+
+                      {hasIncompleteRequiredVariants && (
+                        <Alert severity="warning" sx={{ mb: 1, py: 0 }}>
+                          Pilih varian wajib:{' '}
+                          {missingRequiredVariants.map((item) => item.name).join(', ')}
+                        </Alert>
+                      )}
+
+                      <Grid container spacing={1.25}>
+                        {variantGroups.map((variantGroup) => {
+                          const isRequired = Boolean(variantGroup.is_required)
+                          const value = selectedVariants[variantGroup.id] || ''
+                          const hasError = isRequired && !value
+
+                          return (
+                            <Grid key={variantGroup.id} size={{ xs: 12, sm: 6, md: 4 }}>
+                              <FormControl size="small" fullWidth error={hasError}>
+                                <InputLabel>
+                                  {variantGroup.name}
+                                  {isRequired ? ' *' : ''}
+                                </InputLabel>
+                                <Select
+                                  value={value}
+                                  onChange={(e) =>
+                                    setSelectedVariants((prev) => ({
+                                      ...prev,
+                                      [variantGroup.id]: e.target.value || null
+                                    }))
+                                  }
+                                  label={variantGroup.name + (isRequired ? ' *' : '')}
+                                >
+                                  {!isRequired && (
+                                    <MenuItem value="">
+                                      <em>Tidak ada</em>
+                                    </MenuItem>
+                                  )}
+                                  {variantGroup.items.map((item) => (
+                                    <MenuItem key={item.id} value={item.id}>
+                                      {item.name}
+                                      {item.price > 0 ? ` (+${formatRupiah(item.price)})` : ''}
+                                    </MenuItem>
+                                  ))}
+                                </Select>
+                                <FormHelperText>
+                                  {hasError
+                                    ? 'Wajib dipilih'
+                                    : isRequired
+                                      ? 'Varian wajib'
+                                      : 'Varian opsional'}
+                                </FormHelperText>
+                              </FormControl>
+                            </Grid>
+                          )
+                        })}
+                      </Grid>
+                    </Box>
+                  )}
                 </Stack>
               </Paper>
             )}
@@ -657,6 +805,16 @@ export const CreateTransactionPage = () => {
                                 />
                               )}
                             </Stack>
+                            {formatCartVariants(row.variants) && (
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                display="block"
+                                mt={0.25}
+                              >
+                                Varian: {formatCartVariants(row.variants)}
+                              </Typography>
+                            )}
                           </Box>
                           <Stack alignItems="flex-end" spacing={0.5}>
                             <Typography variant="caption" fontWeight={700} color="primary.main">
@@ -1229,6 +1387,103 @@ export const CreateTransactionPage = () => {
                   )}
                 </Grid>
 
+                {/* Variants V1 */}
+                {variantGroups.length > 0 && (
+                  <Grid size={{ xs: 12 }}>
+                    <Box
+                      sx={{
+                        p: 2,
+                        border: '1px dashed',
+                        borderColor: hasIncompleteRequiredVariants ? 'warning.main' : 'divider',
+                        borderRadius: 2,
+                        bgcolor: hasIncompleteRequiredVariants ? 'warning.50' : 'background.paper'
+                      }}
+                    >
+                      <Stack
+                        direction={{ xs: 'column', sm: 'row' }}
+                        spacing={1}
+                        justifyContent="space-between"
+                        alignItems={{ xs: 'flex-start', sm: 'center' }}
+                        mb={1.5}
+                      >
+                        <Typography variant="subtitle2" fontWeight={700}>
+                          Pilihan Varian Produk
+                        </Typography>
+                        <Stack direction="row" spacing={0.75}>
+                          <Chip
+                            label={`${selectedVariantCount}/${variantGroups.length} dipilih`}
+                            size="small"
+                            color={selectedVariantCount > 0 ? 'primary' : 'default'}
+                          />
+                          {requiredVariantGroups.length > 0 && (
+                            <Chip
+                              label={`${requiredVariantGroups.length} wajib`}
+                              size="small"
+                              color={hasIncompleteRequiredVariants ? 'warning' : 'success'}
+                              variant={hasIncompleteRequiredVariants ? 'filled' : 'outlined'}
+                            />
+                          )}
+                        </Stack>
+                      </Stack>
+
+                      {hasIncompleteRequiredVariants && (
+                        <Alert severity="warning" sx={{ mb: 1.5 }}>
+                          Pilih varian wajib:{' '}
+                          {missingRequiredVariants.map((item) => item.name).join(', ')}
+                        </Alert>
+                      )}
+
+                      <Grid container spacing={2}>
+                        {variantGroups.map((variantGroup) => {
+                          const isRequired = Boolean(variantGroup.is_required)
+                          const value = selectedVariants[variantGroup.id] || ''
+                          const hasError = isRequired && !value
+
+                          return (
+                            <Grid key={variantGroup.id} size={{ xs: 12, md: 4 }}>
+                              <FormControl fullWidth error={hasError}>
+                                <InputLabel>
+                                  {variantGroup.name}
+                                  {isRequired ? ' *' : ''}
+                                </InputLabel>
+                                <Select
+                                  value={value}
+                                  onChange={(e) =>
+                                    setSelectedVariants((prev) => ({
+                                      ...prev,
+                                      [variantGroup.id]: e.target.value || null
+                                    }))
+                                  }
+                                  label={variantGroup.name + (isRequired ? ' *' : '')}
+                                >
+                                  {!isRequired && (
+                                    <MenuItem value="">
+                                      <em>Tidak ada</em>
+                                    </MenuItem>
+                                  )}
+                                  {variantGroup.items.map((item) => (
+                                    <MenuItem key={item.id} value={item.id}>
+                                      {item.name}
+                                      {item.price > 0 ? ` (+${formatRupiah(item.price)})` : ''}
+                                    </MenuItem>
+                                  ))}
+                                </Select>
+                                <FormHelperText>
+                                  {hasError
+                                    ? 'Wajib dipilih'
+                                    : isRequired
+                                      ? 'Varian wajib'
+                                      : 'Varian opsional'}
+                                </FormHelperText>
+                              </FormControl>
+                            </Grid>
+                          )
+                        })}
+                      </Grid>
+                    </Box>
+                  </Grid>
+                )}
+
                 {/* Add Button */}
                 <Grid size={{ xs: 12, md: 1 }}>
                   <Button
@@ -1290,6 +1545,16 @@ export const CreateTransactionPage = () => {
                               />
                             )}
                           </Stack>
+                          {formatCartVariants(row.variants) && (
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                              display="block"
+                              mt={0.5}
+                            >
+                              Varian: {formatCartVariants(row.variants)}
+                            </Typography>
+                          )}
                         </TableCell>
                         <TableCell>
                           {row.product_satuan?.satuan?.name ||
@@ -2064,7 +2329,6 @@ export const CreateTransactionPage = () => {
             </IconButton>
           </Stack>
         </DialogTitle>
-
         <DialogContent dividers sx={{ p: 0, bgcolor: '#f5f5f5' }}>
           {/* Thermal receipt preview using iframe */}
           {printPreviewDialog.dataToprint && (
@@ -2129,10 +2393,18 @@ export const CreateTransactionPage = () => {
             color="primary"
             fullWidth
             startIcon={<IconPrinter size={16} />}
-            onClick={() => {
-              if (printPreviewDialog.dataToprint) {
-                window.api.printOrderReceipt(printPreviewDialog.dataToprint)
+            onClick={async () => {
+              try {
+                if (printPreviewDialog.dataToprint) {
+                  const result = await window.api.printOrderReceipt(printPreviewDialog.dataToprint)
+                  if (!result?.success) {
+                    console.error('Print receipt gagal:', result?.error || 'Unknown error')
+                  }
+                }
+              } catch (error) {
+                console.error('Print receipt error:', error)
               }
+
               setPrintPreviewDialog({ open: false, dataToprint: null })
               navigate('/transaction/history')
             }}

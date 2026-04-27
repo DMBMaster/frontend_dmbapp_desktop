@@ -17,8 +17,8 @@ const api = {
     return await ipcRenderer.invoke('get-assets-path')
   },
 
-  printOrderReceipt(data) {
-    ipcRenderer.send('print-order-receipt', data)
+  printOrderReceipt: async (data) => {
+    return await ipcRenderer.invoke('print-order-receipt', data)
   },
 
   // Auto updater

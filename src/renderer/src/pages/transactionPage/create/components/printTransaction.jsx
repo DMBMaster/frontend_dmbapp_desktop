@@ -11,7 +11,43 @@ import { formatRupiah } from '@renderer/utils/myFunctions'
  *   paymentMethod, amountPaid, change,
  *   notes (order notes), footer
  */
-export const buildReceiptHTML = (order) => {
+const escapeHtml = (value) =>
+  String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+
+const getDefaultSettings = () => ({
+  paperSize: 'MM58',
+  showBusinessName: true,
+  showOutletName: true,
+  showAddress: true,
+  showCity: false,
+  showProvince: false,
+  showCountry: false,
+  showEmail: false,
+  showPhone: false,
+  customHeaderText: false,
+  headerText: '',
+  showNoteNumber: true,
+  showTransactionTime: true,
+  showOrderNumber: true,
+  showCashierPaymentName: true,
+  showCustomer: true,
+  showOrderType: false,
+  showTableNumber: false,
+  showUnitPrice: true,
+  showNotes: true,
+  customFooterText: false,
+  footerText: ''
+})
+
+export const buildReceiptHTML = (order, receiptSettings = {}) => {
+  const settings = { ...getDefaultSettings(), ...(receiptSettings || {}) }
+  const paperWidth = settings.paperSize === 'MM80' ? 360 : 280
+
   const itemsHTML =
     order.items?.length > 0
       ? order.items
@@ -20,23 +56,22 @@ export const buildReceiptHTML = (order) => {
         <div class="item-block">
           <div class="item-row">
             <span class="item-qty">${item.quantity}</span>
-            <span class="item-name">${item.productName}</span>
+            <span class="item-name">${escapeHtml(item.productName)}</span>
             <span class="item-price">${item.price === 0 ? 'FREE' : formatRupiah(item.price * item.quantity)}</span>
           </div>
-          ${item.price !== 0 ? `<div class="item-detail">${item.quantity} x ${formatRupiah(item.price)}</div>` : ''}
-          ${item.notes ? `<div class="item-note">* ${item.notes}</div>` : ''}
+          ${settings.showUnitPrice && item.price !== 0 ? `<div class="item-detail">${item.quantity} x ${formatRupiah(item.price)}</div>` : ''}
+          ${item.variants ? `<div class="item-detail">Varian: ${escapeHtml(item.variants)}</div>` : ''}
+          ${item.notes ? `<div class="item-note">* ${escapeHtml(item.notes)}</div>` : ''}
         </div>`
           )
           .join('')
       : `<div class="empty-items">Tidak ada item</div>`
 
-  const now = new Date()
-  const tanggal =
-    order.invoiceDate ||
-    now
-      .toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: '2-digit' })
-      .replace(/\//g, '-')
-  const jam = now.toLocaleTimeString('id-ID', {
+  const invoiceDateObj = order.invoiceDate ? new Date(order.invoiceDate) : new Date()
+  const tanggal = invoiceDateObj
+    .toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: '2-digit' })
+    .replace(/\//g, '-')
+  const jam = invoiceDateObj.toLocaleTimeString('id-ID', {
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit'
@@ -72,6 +107,81 @@ export const buildReceiptHTML = (order) => {
     summaryHTML += sumRow('Kembali', formatRupiah(order.change || 0), true)
   }
 
+  const headerLines = []
+  if (settings.customHeaderText && settings.headerText) {
+    headerLines.push(
+      `<div class="header-addr">${escapeHtml(settings.headerText).replace(/\n/g, '<br/>')}</div>`
+    )
+  } else {
+    if (settings.showBusinessName && order.businessName) {
+      headerLines.push(`<div class="header-name">${escapeHtml(order.businessName)}</div>`)
+    }
+    if (settings.showOutletName && order.outletName) {
+      headerLines.push(`<div class="header-addr">${escapeHtml(order.outletName)}</div>`)
+    }
+    if (settings.showAddress && order.outletAddress) {
+      headerLines.push(`<div class="header-addr">${escapeHtml(order.outletAddress)}</div>`)
+    }
+    if (settings.showCity && order.city) {
+      headerLines.push(`<div class="header-addr">${escapeHtml(order.city)}</div>`)
+    }
+    if (settings.showProvince && order.province) {
+      headerLines.push(`<div class="header-addr">${escapeHtml(order.province)}</div>`)
+    }
+    if (settings.showCountry && order.country) {
+      headerLines.push(`<div class="header-addr">${escapeHtml(order.country)}</div>`)
+    }
+    if (settings.showEmail && order.email) {
+      headerLines.push(`<div class="header-addr">${escapeHtml(order.email)}</div>`)
+    }
+    if (settings.showPhone && order.phone) {
+      headerLines.push(`<div class="header-addr">${escapeHtml(order.phone)}</div>`)
+    }
+  }
+
+  const infoRows = []
+  if (settings.showNoteNumber && order.invoiceNo) {
+    infoRows.push(
+      `<div class="info-row"><span class="info-label">No Nota</span><span class="info-colon">:</span><span>${escapeHtml(order.invoiceNo)}</span></div>`
+    )
+  }
+  if (settings.showTransactionTime) {
+    infoRows.push(
+      `<div class="info-row"><span class="info-label">Tanggal</span><span class="info-colon">:</span><span>${tanggal}</span></div>`
+    )
+    infoRows.push(
+      `<div class="info-row"><span class="info-label">Jam</span><span class="info-colon">:</span><span>${jam}</span></div>`
+    )
+  }
+  if (settings.showOrderNumber && order.orderNumber) {
+    infoRows.push(
+      `<div class="info-row"><span class="info-label">No Order</span><span class="info-colon">:</span><span>${escapeHtml(order.orderNumber)}</span></div>`
+    )
+  }
+  if (settings.showCustomer && order.customerName) {
+    infoRows.push(
+      `<div class="info-row"><span class="info-label">Customer</span><span class="info-colon">:</span><span>${escapeHtml(order.customerName)}</span></div>`
+    )
+  }
+  if (settings.showCashierPaymentName && order.cashierName) {
+    infoRows.push(
+      `<div class="info-row"><span class="info-label">Kasir</span><span class="info-colon">:</span><span>${escapeHtml(order.cashierName)}</span></div>`
+    )
+  }
+  if (settings.showOrderType && order.orderType) {
+    infoRows.push(
+      `<div class="info-row"><span class="info-label">Tipe Order</span><span class="info-colon">:</span><span>${escapeHtml(order.orderType)}</span></div>`
+    )
+  }
+  if (settings.showTableNumber && order.tableNumber) {
+    infoRows.push(
+      `<div class="info-row"><span class="info-label">No Meja</span><span class="info-colon">:</span><span>${escapeHtml(order.tableNumber)}</span></div>`
+    )
+  }
+
+  const footerText =
+    settings.customFooterText && settings.footerText ? settings.footerText : order.footer
+
   return `
 <!DOCTYPE html>
 <html>
@@ -84,7 +194,7 @@ export const buildReceiptHTML = (order) => {
     font-size: 12px;
     color: #111;
     background: #fff;
-    width: 280px;
+    width: ${paperWidth}px;
     padding: 12px 8px;
   }
 
@@ -161,16 +271,11 @@ export const buildReceiptHTML = (order) => {
 </style>
 </head>
 <body>
-  <div class="header-name">${order.outletName || 'OUTLET'}</div>
-  ${order.outletAddress ? `<div class="header-addr">${order.outletAddress}</div>` : ''}
+  ${headerLines.length > 0 ? headerLines.join('') : `<div class="header-name">${escapeHtml(order.outletName || 'OUTLET')}</div>`}
   <div class="section-title">---PAYMENT---</div>
   <div class="sep-bold"></div>
 
-  <div class="info-row"><span class="info-label">Tanggal</span><span class="info-colon">:</span><span>${tanggal}</span></div>
-  <div class="info-row"><span class="info-label">Jam Masuk</span><span class="info-colon">:</span><span>${jam}</span></div>
-  <div class="info-row"><span class="info-label">Nama Tamu</span><span class="info-colon">:</span><span>${order.customerName || 'Umum'}</span></div>
-  ${order.cashierName ? `<div class="info-row"><span class="info-label">Kasir</span><span class="info-colon">:</span><span>${order.cashierName}</span></div>` : ''}
-  ${order.invoiceNo ? `<div class="info-row"><span class="info-label">No. Invoice</span><span class="info-colon">:</span><span>${order.invoiceNo}</span></div>` : ''}
+  ${infoRows.join('')}
 
   <div class="sep-bold"></div>
 
@@ -184,9 +289,9 @@ export const buildReceiptHTML = (order) => {
 
   <div class="sep-bold"></div>
   <div class="footer-section">
-    ${order.footer || 'Thank You For Coming !!!'}
+    ${escapeHtml(footerText || 'Thank You For Coming !!!').replace(/\n/g, '<br/>')}
   </div>
-  ${order.notes ? `<div class="footer-note">Note : ${order.notes}</div>` : ''}
+  ${settings.showNotes && order.notes ? `<div class="footer-note">Note : ${escapeHtml(order.notes)}</div>` : ''}
 </body>
 </html>`
 }

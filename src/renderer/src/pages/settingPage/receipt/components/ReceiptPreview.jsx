@@ -305,6 +305,54 @@ export const ReceiptPreview = ({ settings, socialMediaLines }) => {
             </Box>
           )}
 
+          {(settings?.showWifi || settings?.showRoomPin || settings?.showBreakfast) && (
+            <Box sx={{ mt: 1.5, pt: 1, borderTop: '1px dashed', borderColor: 'grey.300' }}>
+              {settings?.showWifi && (
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.2, mb: 0.5 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Wifi:</span>
+                    <span>{settings?.wifiName || 'NAMA_WIFI'}</span>
+                  </Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Password:</span>
+                    <span>{settings?.wifiPassword || 'PASSWORD_WIFI'}</span>
+                  </Box>
+                </Box>
+              )}
+
+              {settings?.showRoomPin && (
+                <Typography variant="caption" display="block" sx={{ fontWeight: 700, mb: 0.5 }}>
+                  PIN KAMAR: 123456
+                </Typography>
+              )}
+
+              {settings?.showBreakfast && (
+                <Box sx={{ mt: 1, textAlign: 'center' }}>
+                  <Typography variant="caption" display="block" sx={{ fontWeight: 700, mb: 0.5 }}>
+                    VOUCHER BREAKFAST
+                  </Typography>
+                  <Box
+                    sx={{
+                      width: 60,
+                      height: 60,
+                      bgcolor: 'grey.200',
+                      mx: 'auto',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      mb: 0.5
+                    }}
+                  >
+                    <Typography variant="caption">QR</Typography>
+                  </Box>
+                  <Typography variant="caption" display="block">
+                    2 PAX
+                  </Typography>
+                </Box>
+              )}
+            </Box>
+          )}
+
           <Typography variant="caption" color="text.secondary" display="block" mt={2}>
             * Data preview ini hanya contoh
           </Typography>

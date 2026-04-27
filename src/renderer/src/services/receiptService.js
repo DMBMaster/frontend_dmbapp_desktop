@@ -5,8 +5,8 @@ const CACHE_KEY = 'receipt_settings_cache_v1'
 const ReceiptService = () => {
   const axiosInstance = useAxiosInstance()
 
-  const getReceiptSettings = async () => {
-    const response = await axiosInstance.get('/merchant/setting/receipt')
+  const getReceiptSettings = async (params = {}) => {
+    const response = await axiosInstance.get('/merchant/setting/receipt', { params })
     const rawData = response?.data?.data
     const payload = rawData?.initialData ?? rawData?.settings ?? rawData ?? null
 
