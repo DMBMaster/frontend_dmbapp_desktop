@@ -15,6 +15,18 @@ export const UseDetail = () => {
   const [units, setUnits] = useState([])
   const [selectedRow, setSelectedRow] = useState(null)
 
+  // ─── Variant states ─────────────────────────────────────────────────────────
+  const [availableVariants, setAvailableVariants] = useState([])
+  const [openVariantDialog, setOpenVariantDialog] = useState(false)
+  const [variantDialogMode, setVariantDialogMode] = useState('create') // 'create' | 'select'
+  const [selectedVariantToAdd, setSelectedVariantToAdd] = useState(null)
+  const [newVariantData, setNewVariantData] = useState({
+    name: '',
+    is_required: false,
+    can_multiple: false,
+    items: [{ name: '', price: 0 }]
+  })
+
   const [multiSatuanData, setMultiSatuanData] = useState({
     satuan_id: '',
     product_id: id,
@@ -37,6 +49,7 @@ export const UseDetail = () => {
     fetchDataMultiHarga: false,
     fetchDataUnit: false,
     fetchDataProduction: false,
+    fetchAvailableVariants: false,
     submit: false
   })
 
@@ -45,12 +58,14 @@ export const UseDetail = () => {
     deleteMultiSatuan: false,
     addMultiHarga: false,
     deleteMultiHarga: false,
-    addProduction: false
+    addProduction: false,
+    deleteVariant: false
   })
 
   const [error, setError] = useState('')
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' })
 
+  // ─── Helpers ─────────────────────────────────────────────────────────────────
   const showSnackbar = (message, severity = 'success') => {
     setSnackbar({ open: true, message, severity })
   }
@@ -79,6 +94,23 @@ export const UseDetail = () => {
     setMultiHargaData({ product_id: '', min_quantity: null, max_quantity: null, price: null })
   }
 
+  const resetNewVariantData = () => {
+    setNewVariantData({
+      name: '',
+      is_required: false,
+      can_multiple: false,
+      items: [{ name: '', price: 0 }]
+    })
+    setSelectedVariantToAdd(null)
+    setVariantDialogMode('create')
+  }
+
+  const generateRandomCode = () => {
+    const randomNumber = Math.floor(Math.random() * 900000) + 100000
+    return `X/${randomNumber}`
+  }
+
+  // ─── Fetchers ─────────────────────────────────────────────────────────────────
   const fetchDetail = async () => {
     if (!id) return
     try {
@@ -86,7 +118,6 @@ export const UseDetail = () => {
       const response = await productService.getProductDetail(id)
       const product = response.product
       setDetailData(product)
-
       setMultiSatuanData((prev) => ({ ...prev, value: product?.price_walkin ?? '' }))
     } catch (error) {
       showError('Gagal Mengambil Detail Produk', error)
@@ -98,8 +129,7 @@ export const UseDetail = () => {
   const fetchDataMultiSatuan = async () => {
     try {
       setLoading((prev) => ({ ...prev, fetchDataMultiSatuan: true }))
-      const params = { product_id: id }
-      const response = await productService.getMultiSatuanProducts(params)
+      const response = await productService.getMultiSatuanProducts({ product_id: id })
       setMultiSatuan(response.data || [])
     } catch (error) {
       showError('Gagal Mengambil Data Multi Satuan', error)
@@ -111,8 +141,7 @@ export const UseDetail = () => {
   const fetchDataMultiHarga = async (productId) => {
     try {
       setLoading((prev) => ({ ...prev, fetchDataMultiHarga: true }))
-      const params = { product_id: productId }
-      const response = await productService.getMultiHarga(params)
+      const response = await productService.getMultiHarga({ product_id: productId })
       setMultiHarga(response.data || [])
     } catch (error) {
       showError('Gagal Mengambil Data Multi Harga', error)
@@ -140,19 +169,31 @@ export const UseDetail = () => {
       const response = await productService.getProductions(id)
       setProductions(response.data || [])
     } catch (error) {
-      console.log('jajaj', error)
-
       showError('Gagal Mengambil Data Produksi/Resep', error)
     } finally {
       setLoading((prev) => ({ ...prev, fetchDataProduction: false }))
     }
   }
 
+  const fetchAvailableVariants = async () => {
+    try {
+      setLoading((prev) => ({ ...prev, fetchAvailableVariants: true }))
+      const response = await productService.getVariantsByOutlet()
+      setAvailableVariants(response.data || [])
+    } catch (error) {
+      showError('Gagal Mengambil Data Varian', error)
+    } finally {
+      setLoading((prev) => ({ ...prev, fetchAvailableVariants: false }))
+    }
+  }
+
+  // ─── Effects ──────────────────────────────────────────────────────────────────
   useEffect(() => {
     fetchDetail()
     fetchDataMultiSatuan()
     fetchDataUnit()
     fetchDataProduction()
+    fetchAvailableVariants()
   }, [id])
 
   useEffect(() => {
@@ -161,6 +202,7 @@ export const UseDetail = () => {
     }
   }, [detailData])
 
+  // ─── Multi Satuan handlers ────────────────────────────────────────────────────
   const handleChangeMultiSatuan = (e) => {
     const { name, value } = e.target
     setMultiSatuanData((prev) => {
@@ -224,6 +266,7 @@ export const UseDetail = () => {
     setOpenDialog((prev) => ({ ...prev, deleteMultiSatuan: false }))
   }
 
+  // ─── Multi Harga handlers ─────────────────────────────────────────────────────
   const handleChangeMultiHarga = (e) => {
     const { name, value } = e.target
     setMultiHargaData((prev) => ({ ...prev, [name]: value }))
@@ -279,11 +322,7 @@ export const UseDetail = () => {
     setOpenDialog((prev) => ({ ...prev, deleteMultiHarga: false }))
   }
 
-  const generateRandomCode = () => {
-    const randomNumber = Math.floor(Math.random() * 900000) + 100000
-    return `X/${randomNumber}`
-  }
-
+  // ─── Production/Resep handlers ────────────────────────────────────────────────
   const handleUpdateProduction = async (updatedData) => {
     const transformedData = {
       outlet_id: updatedData.outlet.guid,
@@ -332,6 +371,62 @@ export const UseDetail = () => {
     handleUpdateProduction(updatedProductions[0])
   }
 
+  // ─── Variant handlers ─────────────────────────────────────────────────────────
+  const handleSubmitVariant = async () => {
+    try {
+      setLoading((prev) => ({ ...prev, submit: true }))
+      let variantId = null
+
+      if (variantDialogMode === 'select') {
+        if (!selectedVariantToAdd) return
+        variantId = selectedVariantToAdd.id
+      } else {
+        // Buat variant master baru
+        const outletId = localStorage.getItem('outletGuid')
+        const response = await productService.createVariant({
+          outlet_id: outletId,
+          name: newVariantData.name,
+          is_required: newVariantData.is_required,
+          can_multiple: newVariantData.can_multiple,
+          items: newVariantData.items
+        })
+        variantId = response.data?.id
+      }
+
+      // Link variant ke produk
+      await productService.linkVariantToProduct({
+        product_id: detailData?.guid,
+        variant_id: variantId
+      })
+
+      showSnackbar('Varian berhasil ditambahkan!')
+      setOpenVariantDialog(false)
+      resetNewVariantData()
+      fetchDetail() // refresh agar variants di detailData terupdate
+      fetchAvailableVariants()
+    } catch (error) {
+      showError('Gagal Tambah Varian', error)
+    } finally {
+      setLoading((prev) => ({ ...prev, submit: false }))
+    }
+  }
+
+  const handleUnlinkVariant = async (variantId) => {
+    const variantLink = detailData?.variants?.find((v) => v.id === variantId)
+    if (!variantLink) return
+
+    try {
+      setLoading((prev) => ({ ...prev, submit: true }))
+      await productService.unlinkVariantFromProduct(variantLink.link_id)
+      showSnackbar('Varian berhasil dihapus dari produk!')
+      fetchDetail()
+    } catch (error) {
+      showError('Gagal Hapus Varian', error)
+    } finally {
+      setLoading((prev) => ({ ...prev, submit: false }))
+    }
+  }
+
   return {
     detailData,
     multiSatuan,
@@ -344,6 +439,18 @@ export const UseDetail = () => {
     setMultiSatuanData,
     multiHargaData,
     setMultiHargaData,
+
+    // variant
+    availableVariants,
+    openVariantDialog,
+    setOpenVariantDialog,
+    variantDialogMode,
+    setVariantDialogMode,
+    selectedVariantToAdd,
+    setSelectedVariantToAdd,
+    newVariantData,
+    setNewVariantData,
+    resetNewVariantData,
 
     loading,
     openDialog,
@@ -366,6 +473,9 @@ export const UseDetail = () => {
 
     handleUpdateProduction,
     handleDeleteProductionItem,
-    generateRandomCode
+    generateRandomCode,
+
+    handleSubmitVariant,
+    handleUnlinkVariant
   }
 }

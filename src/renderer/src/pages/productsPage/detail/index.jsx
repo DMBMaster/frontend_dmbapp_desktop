@@ -5,6 +5,7 @@ import {
   Box,
   Button,
   CardContent,
+  Checkbox,
   CircularProgress,
   Dialog,
   DialogActions,
@@ -12,6 +13,7 @@ import {
   DialogContentText,
   DialogTitle,
   Divider,
+  FormControlLabel,
   Grid,
   IconButton,
   Snackbar,
@@ -27,7 +29,7 @@ import {
   Tooltip,
   Typography
 } from '@mui/material'
-import { IconTrash } from '@tabler/icons-react'
+import { IconPlus, IconTrash } from '@tabler/icons-react'
 import BlankCard from '@renderer/components/ui/BlankCard'
 import Breadcrumb from '@renderer/components/ui/breadcrumb/Breadcrumb'
 import CustomFormLabel from '@renderer/components/ui/forms/theme-elements/CustomFormLabel'
@@ -76,6 +78,18 @@ export const DetailProductPage = () => {
     setMultiSatuanData,
     multiHargaData,
 
+    // variant
+    availableVariants,
+    openVariantDialog,
+    setOpenVariantDialog,
+    variantDialogMode,
+    setVariantDialogMode,
+    selectedVariantToAdd,
+    setSelectedVariantToAdd,
+    newVariantData,
+    setNewVariantData,
+    resetNewVariantData,
+
     loading,
     openDialog,
     setOpenDialog,
@@ -96,7 +110,10 @@ export const DetailProductPage = () => {
     handleCancelDeleteMultiHarga,
 
     handleUpdateProduction,
-    handleDeleteProductionItem
+    handleDeleteProductionItem,
+
+    handleSubmitVariant,
+    handleUnlinkVariant
   } = UseDetail()
 
   return (
@@ -135,7 +152,7 @@ export const DetailProductPage = () => {
         <Grid item xs={12}>
           <BlankCard>
             {/* Tabs Header */}
-            <Box sx={{ maxWidth: { xs: 320, sm: 580 } }}>
+            <Box sx={{ maxWidth: { xs: 320, sm: 680 } }}>
               <Tabs
                 value={tabValue}
                 onChange={(_, newValue) => setTabValue(newValue)}
@@ -146,6 +163,7 @@ export const DetailProductPage = () => {
                 <Tab iconPosition="start" label="Multi Satuan" {...a11yProps(1)} />
                 <Tab iconPosition="start" label="Bahan/Resep" {...a11yProps(2)} />
                 <Tab iconPosition="start" label="Multi Harga" {...a11yProps(3)} />
+                <Tab iconPosition="start" label="Varian" {...a11yProps(4)} />
               </Tabs>
             </Box>
             <Divider />
@@ -166,13 +184,11 @@ export const DetailProductPage = () => {
                             Gambar
                           </Typography>
                           <Box textAlign="center" display="flex" justifyContent="center">
-                            <Box>
-                              <Avatar
-                                src={getImgUrl(detailData?.images)}
-                                alt={detailData?.name}
-                                sx={{ width: 180, height: 180, margin: '0 auto' }}
-                              />
-                            </Box>
+                            <Avatar
+                              src={getImgUrl(detailData?.images)}
+                              alt={detailData?.name}
+                              sx={{ width: 180, height: 180, margin: '0 auto' }}
+                            />
                           </Box>
                         </CardContent>
                       </BlankCard>
@@ -181,32 +197,27 @@ export const DetailProductPage = () => {
                       <BlankCard>
                         <CardContent>
                           <form>
-                            <CustomFormLabel
-                              sx={{
-                                mt: 0
-                              }}
-                              htmlFor="text-cpwd"
-                            >
+                            <CustomFormLabel sx={{ mt: 0 }} htmlFor="text-name">
                               Nama
                             </CustomFormLabel>
                             <CustomTextField
-                              id="text-cpwd"
+                              id="text-name"
                               value={detailData?.name}
                               variant="outlined"
                               fullWidth
                               disabled
                             />
-                            <CustomFormLabel htmlFor="text-npwd">Kode Produk</CustomFormLabel>
+                            <CustomFormLabel htmlFor="text-code">Kode Produk</CustomFormLabel>
                             <CustomTextField
-                              id="text-npwd"
+                              id="text-code"
                               value={detailData?.product_code}
                               variant="outlined"
                               fullWidth
                               disabled
                             />
-                            <CustomFormLabel htmlFor="text-conpwd">Stok</CustomFormLabel>
+                            <CustomFormLabel htmlFor="text-stock">Stok</CustomFormLabel>
                             <CustomTextField
-                              id="text-conpwd"
+                              id="text-stock"
                               value={detailData?.stock}
                               variant="outlined"
                               fullWidth
@@ -383,7 +394,7 @@ export const DetailProductPage = () => {
                                   <TextField
                                     label="Harga"
                                     name="value"
-                                    value={multiSatuanData.value}
+                                    value={multiSatuanData.value ?? ''}
                                     onChange={handleChangeMultiSatuan}
                                     fullWidth
                                     type="number"
@@ -392,9 +403,10 @@ export const DetailProductPage = () => {
                                 </Grid>
                                 <Grid size={{ xs: 12 }}>
                                   <TextField
-                                    label="Total Harga (otomatis)"
+                                    label="Total Harga"
                                     name="amount"
                                     value={multiSatuanData.amount}
+                                    onChange={handleChangeMultiSatuan}
                                     fullWidth
                                     type="number"
                                     variant="outlined"
@@ -743,6 +755,289 @@ export const DetailProductPage = () => {
                             </Button>
                             <Button onClick={handleConfirmDeleteMultiHarga} color="error">
                               Hapus
+                            </Button>
+                          </DialogActions>
+                        </Dialog>
+                      </Box>
+                    </CardContent>
+                  </Grid>
+                </Grid>
+              </TabPanel>
+
+              {/* ─── TAB 4: VARIAN ──────────────────────────────────────────── */}
+              <TabPanel value={tabValue} index={4}>
+                <Grid spacing={3}>
+                  <Grid size={{ xs: 12 }}>
+                    <CardContent>
+                      <Box>
+                        {/* Toolbar */}
+                        <Stack
+                          justifyContent="flex-end"
+                          direction={{ xs: 'column', sm: 'row' }}
+                          spacing={{ xs: 1, sm: 2 }}
+                          mb={2}
+                        >
+                          <Button
+                            variant="contained"
+                            disableElevation
+                            color="primary"
+                            startIcon={<IconPlus size={18} />}
+                            onClick={() => setOpenVariantDialog(true)}
+                          >
+                            Tambah Varian
+                          </Button>
+                        </Stack>
+
+                        {/* Tabel Varian */}
+                        <Box sx={{ overflowX: 'auto' }}>
+                          <Table sx={{ whiteSpace: { xs: 'nowrap', md: 'unset' } }}>
+                            <TableHead>
+                              <TableRow>
+                                {['Nama Varian', 'Pilihan (Items)', 'Wajib', 'Multi', 'Aksi'].map(
+                                  (h) => (
+                                    <TableCell key={h}>
+                                      <Typography variant="h6" fontSize="14px">
+                                        {h}
+                                      </Typography>
+                                    </TableCell>
+                                  )
+                                )}
+                              </TableRow>
+                            </TableHead>
+                            <TableBody>
+                              {loading.fetchDetail ? (
+                                <TableRow>
+                                  <TableCell colSpan={5} align="center">
+                                    <CircularProgress size={24} />
+                                  </TableCell>
+                                </TableRow>
+                              ) : detailData?.variants?.length > 0 ? (
+                                detailData.variants.map((variant) => (
+                                  <TableRow key={variant.id}>
+                                    <TableCell>
+                                      <Typography fontSize="14px">{variant.name}</Typography>
+                                    </TableCell>
+                                    <TableCell>
+                                      <Typography fontSize="14px">
+                                        {variant.items
+                                          ?.map(
+                                            (item) =>
+                                              `${item.name} (+${formatRupiah(item.price)})`
+                                          )
+                                          .join(', ')}
+                                      </Typography>
+                                    </TableCell>
+                                    <TableCell>
+                                      <Typography fontSize="14px">
+                                        {variant.is_required ? 'Ya' : 'Tidak'}
+                                      </Typography>
+                                    </TableCell>
+                                    <TableCell>
+                                      <Typography fontSize="14px">
+                                        {variant.can_multiple ? 'Ya' : 'Tidak'}
+                                      </Typography>
+                                    </TableCell>
+                                    <TableCell>
+                                      <Tooltip title="Hapus">
+                                        <IconButton
+                                          color="error"
+                                          onClick={() => handleUnlinkVariant(variant.id)}
+                                          disabled={loading.submit}
+                                        >
+                                          <IconTrash width={22} />
+                                        </IconButton>
+                                      </Tooltip>
+                                    </TableCell>
+                                  </TableRow>
+                                ))
+                              ) : (
+                                <TableRow>
+                                  <TableCell colSpan={5} align="center">
+                                    <Typography variant="body1">Belum ada varian</Typography>
+                                  </TableCell>
+                                </TableRow>
+                              )}
+                            </TableBody>
+                          </Table>
+                        </Box>
+
+                        {/* Dialog Tambah Varian */}
+                        <Dialog
+                          open={openVariantDialog}
+                          onClose={() => {
+                            setOpenVariantDialog(false)
+                            resetNewVariantData()
+                          }}
+                          maxWidth="sm"
+                          fullWidth
+                        >
+                          <DialogTitle sx={{ mt: 1 }}>Tambah Varian ke Produk</DialogTitle>
+                          <DialogContent>
+                            {/* Mode selector tabs */}
+                            <Box sx={{ mb: 2 }}>
+                              <Tabs
+                                value={variantDialogMode}
+                                onChange={(_, v) => setVariantDialogMode(v)}
+                                sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}
+                              >
+                                <Tab label="Buat Baru" value="create" />
+                                <Tab label="Pilih dari Master" value="select" />
+                              </Tabs>
+                            </Box>
+
+                            {variantDialogMode === 'select' ? (
+                              /* ── Mode: Pilih dari master ── */
+                              <Box sx={{ pt: 1 }}>
+                                <Autocomplete
+                                  options={availableVariants}
+                                  getOptionLabel={(option) => option.name || ''}
+                                  loading={loading.fetchAvailableVariants}
+                                  onChange={(_, newValue) => setSelectedVariantToAdd(newValue)}
+                                  renderInput={(params) => (
+                                    <TextField
+                                      {...params}
+                                      label="Pilih Grup Varian"
+                                      fullWidth
+                                      InputProps={{
+                                        ...params.InputProps,
+                                        endAdornment: (
+                                          <>
+                                            {loading.fetchAvailableVariants ? (
+                                              <CircularProgress color="inherit" size={20} />
+                                            ) : null}
+                                            {params.InputProps.endAdornment}
+                                          </>
+                                        )
+                                      }}
+                                    />
+                                  )}
+                                />
+                              </Box>
+                            ) : (
+                              /* ── Mode: Buat baru ── */
+                              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+                                <TextField
+                                  label="Nama Grup Varian"
+                                  fullWidth
+                                  value={newVariantData.name}
+                                  onChange={(e) =>
+                                    setNewVariantData({ ...newVariantData, name: e.target.value })
+                                  }
+                                  placeholder="Contoh: Ukuran, Topping, Level Pedas"
+                                />
+
+                                <Stack direction="row" spacing={2}>
+                                  <FormControlLabel
+                                    control={
+                                      <Checkbox
+                                        checked={newVariantData.is_required}
+                                        onChange={(e) =>
+                                          setNewVariantData({
+                                            ...newVariantData,
+                                            is_required: e.target.checked
+                                          })
+                                        }
+                                      />
+                                    }
+                                    label="Wajib Pilih"
+                                  />
+                                  <FormControlLabel
+                                    control={
+                                      <Checkbox
+                                        checked={newVariantData.can_multiple}
+                                        onChange={(e) =>
+                                          setNewVariantData({
+                                            ...newVariantData,
+                                            can_multiple: e.target.checked
+                                          })
+                                        }
+                                      />
+                                    }
+                                    label="Bisa Pilih Banyak"
+                                  />
+                                </Stack>
+
+                                <Typography variant="subtitle1" fontWeight="bold">
+                                  Pilihan Item:
+                                </Typography>
+
+                                {newVariantData.items.map((item, index) => (
+                                  <Stack key={index} direction="row" spacing={1} alignItems="center">
+                                    <TextField
+                                      label="Nama Item"
+                                      size="small"
+                                      sx={{ flexGrow: 1 }}
+                                      value={item.name}
+                                      onChange={(e) => {
+                                        const newItems = [...newVariantData.items]
+                                        newItems[index].name = e.target.value
+                                        setNewVariantData({ ...newVariantData, items: newItems })
+                                      }}
+                                    />
+                                    <TextField
+                                      label="Harga Tambahan"
+                                      size="small"
+                                      type="number"
+                                      sx={{ width: '140px' }}
+                                      value={item.price}
+                                      onChange={(e) => {
+                                        const newItems = [...newVariantData.items]
+                                        newItems[index].price = Number(e.target.value)
+                                        setNewVariantData({ ...newVariantData, items: newItems })
+                                      }}
+                                    />
+                                    <IconButton
+                                      color="error"
+                                      disabled={newVariantData.items.length === 1}
+                                      onClick={() => {
+                                        const newItems = newVariantData.items.filter(
+                                          (_, i) => i !== index
+                                        )
+                                        setNewVariantData({ ...newVariantData, items: newItems })
+                                      }}
+                                    >
+                                      <IconTrash size={18} />
+                                    </IconButton>
+                                  </Stack>
+                                ))}
+
+                                <Button
+                                  variant="outlined"
+                                  size="small"
+                                  startIcon={<IconPlus size={18} />}
+                                  onClick={() =>
+                                    setNewVariantData({
+                                      ...newVariantData,
+                                      items: [...newVariantData.items, { name: '', price: 0 }]
+                                    })
+                                  }
+                                >
+                                  Tambah Item
+                                </Button>
+                              </Box>
+                            )}
+                          </DialogContent>
+                          <DialogActions sx={{ p: 2 }}>
+                            <Button
+                              onClick={() => {
+                                setOpenVariantDialog(false)
+                                resetNewVariantData()
+                              }}
+                            >
+                              Batal
+                            </Button>
+                            <Button
+                              onClick={handleSubmitVariant}
+                              variant="contained"
+                              color="primary"
+                              disabled={
+                                loading.submit ||
+                                (variantDialogMode === 'select'
+                                  ? !selectedVariantToAdd
+                                  : !newVariantData.name)
+                              }
+                            >
+                              {loading.submit ? 'Menyimpan...' : 'Simpan Varian'}
                             </Button>
                           </DialogActions>
                         </Dialog>

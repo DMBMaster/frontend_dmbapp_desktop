@@ -209,8 +209,7 @@ const ProductService = () => {
   const createUnitsProducts = async (data) => {
     try {
       const response = await axiosInstance.post('/product-service/satuan', data)
-      const responseData = response.data
-      return responseData
+      return response.data
     } catch (error) {
       console.log('createUnitsProducts:', error)
       console.warn('⚠️ API failed → Loading units from cache')
@@ -220,8 +219,7 @@ const ProductService = () => {
   const updateUnitsProducts = async (id, data) => {
     try {
       const response = await axiosInstance.put(`/product-service/satuan/${id}`, data)
-      const responseData = response.data
-      return responseData
+      return response.data
     } catch (error) {
       console.log('updateUnitsProducts:', error)
       console.warn('⚠️ API failed → Loading units from cache')
@@ -231,8 +229,7 @@ const ProductService = () => {
   const deleteUnitsProducts = async (id) => {
     try {
       const response = await axiosInstance.delete(`/product-service/satuan/${id}`)
-      const responseData = response.data
-      return responseData
+      return response.data
     } catch (error) {
       console.log('deleteUnitsProducts:', error)
       console.warn('⚠️ API failed → Loading units from cache')
@@ -308,6 +305,7 @@ const ProductService = () => {
       throw error
     }
   }
+
   const createStockProduction = async (data) => {
     try {
       const response = await axiosInstance.post(`/product-service/stock-production`, data)
@@ -317,6 +315,7 @@ const ProductService = () => {
       throw error
     }
   }
+
   const updateStockProduction = async (id, data) => {
     try {
       const response = await axiosInstance.put(`/product-service/stock-production/${id}`, data)
@@ -327,6 +326,63 @@ const ProductService = () => {
     }
   }
 
+  // ─── Variant methods ───────────────────────────────────────────────────────────
+  /**
+   * Ambil semua variant master milik outlet
+   */
+  const getVariantsByOutlet = async () => {
+    const outletGuid = getOutletGuid()
+    try {
+      const response = await axiosInstance.get(`/product-service/variant/outlet/${outletGuid}`)
+      return response.data
+    } catch (error) {
+      console.error(error)
+      throw error
+    }
+  }
+
+  /**
+   * Buat variant master baru
+   * payload: { outlet_id, name, is_required, can_multiple, items: [{ name, price }] }
+   */
+  const createVariant = async (payload) => {
+    try {
+      const response = await axiosInstance.post(`/product-service/variant`, payload)
+      return response.data
+    } catch (error) {
+      console.error(error)
+      throw error
+    }
+  }
+
+  /**
+   * Link variant ke produk
+   * payload: { product_id, variant_id }
+   */
+  const linkVariantToProduct = async (payload) => {
+    try {
+      const response = await axiosInstance.post(`/product-service/product-variant`, payload)
+      return response.data
+    } catch (error) {
+      console.error(error)
+      throw error
+    }
+  }
+
+  /**
+   * Unlink (hapus) variant dari produk menggunakan link_id
+   */
+  const unlinkVariantFromProduct = async (linkId) => {
+    try {
+      const response = await axiosInstance.delete(`/product-service/product-variant/${linkId}`)
+      return response.data
+    } catch (error) {
+      console.error(error)
+      throw error
+    }
+  }
+
+  // ─── Misc helpers ──────────────────────────────────────────────────────────────
   const saveToPendingQueue = async (outletGuid, payload) => {
     await localdb.pendingProducts.add({
       outlet_guid: outletGuid,
@@ -342,9 +398,8 @@ const ProductService = () => {
 
       const cached = await localdb.productDetails.get(guid)
       if (cached && cached.data) {
-        const existingData = cached.data
         await localdb.productDetails.update(guid, {
-          data: { ...existingData, ...payload },
+          data: { ...cached.data, ...payload },
           updated_at: new Date().toISOString()
         })
       }
@@ -524,7 +579,12 @@ const ProductService = () => {
     updateStockProduction,
     createUnitsProducts,
     updateUnitsProducts,
-    deleteUnitsProducts
+    deleteUnitsProducts,
+    // variant
+    getVariantsByOutlet,
+    createVariant,
+    linkVariantToProduct,
+    unlinkVariantFromProduct
   }
 }
 
