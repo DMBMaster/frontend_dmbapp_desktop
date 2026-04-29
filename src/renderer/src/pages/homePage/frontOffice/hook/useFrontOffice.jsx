@@ -55,7 +55,7 @@ export const UseFrontOffice = () => {
     total: 0
   })
 
-  const [viewMode, setViewMode] = useState('setViewMode')
+  const [viewMode, setViewMode] = useState('card')
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebounce(search, 500)
   const [status, setStatus] = useState('CONFIRMED')
