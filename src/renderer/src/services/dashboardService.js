@@ -330,6 +330,80 @@ const DashboardService = () => {
     }
   }
 
+  // ============================
+  // GET HOTEL METRICS
+  // ============================
+  const getHotelMetrics = async (params = {}) => {
+    const cacheKey = `hotel_metrics_${params?.outlet_id || 'all'}_${params?.start_date || 'default'}_${params?.end_date || 'default'}`
+
+    if (!isOnline()) {
+      console.log('📴 Offline detected → Loading hotel metrics from cache')
+      const cached = await getFromCache('hotel_metrics', cacheKey)
+      if (cached) return cached
+      return { data: {}, offline: true }
+    }
+
+    try {
+      const response = await axiosInstance.get(`/trx-service/v2/hotel/metrics`, {
+        headers: {
+          Authorization: `Bearer ${getToken()}`,
+          'Content-Type': 'application/json'
+        },
+        params
+      })
+
+      const data = response.data?.data || {}
+      await saveToCache('hotel_metrics', cacheKey, data)
+
+      return { data }
+    } catch (error) {
+      await LoggerService.error('DashboardService.getHotelMetrics', 'Get hotel metrics failed', {
+        params,
+        response: error.response
+      })
+      const cached = await getFromCache('hotel_metrics', cacheKey)
+      if (cached) return cached
+      throw error
+    }
+  }
+
+  // ============================
+  // GET HOTEL OCCUPANCY
+  // ============================
+  const getHotelOccupancy = async (params = {}) => {
+    const cacheKey = `hotel_occ_${params?.outlet_id || 'all'}_${params?.start_at || 'default'}_${params?.end_at || 'default'}_${params?.status || 'all'}`
+
+    if (!isOnline()) {
+      console.log('📴 Offline detected → Loading hotel occupancy from cache')
+      const cached = await getFromCache('hotel_occ', cacheKey)
+      if (cached) return cached
+      return { data: null, offline: true }
+    }
+
+    try {
+      const response = await axiosInstance.get(`/trx-service/stats/hotel/occ`, {
+        headers: {
+          Authorization: `Bearer ${getToken()}`,
+          'Content-Type': 'application/json'
+        },
+        params
+      })
+
+      const data = response.data || null
+      await saveToCache('hotel_occ', cacheKey, data)
+
+      return { data }
+    } catch (error) {
+      await LoggerService.error('DashboardService.getHotelOccupancy', 'Get hotel occupancy failed', {
+        params,
+        response: error.response
+      })
+      const cached = await getFromCache('hotel_occ', cacheKey)
+      if (cached) return cached
+      throw error
+    }
+  }
+
   return {
     getOutlets,
     getDashboardSummary,
@@ -337,7 +411,9 @@ const DashboardService = () => {
     getBookingList,
     getBookingChannel,
     getYearlySales,
-    getMonthlySales
+    getMonthlySales,
+    getHotelMetrics,
+    getHotelOccupancy
   }
 }
 
