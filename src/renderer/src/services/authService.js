@@ -35,9 +35,19 @@ const AuthService = () => {
     }
   }
 
-  const loginAuth = async (data) => {
+  const loginAuthV4 = async (data) => {
     try {
-      const response = await axiosInstance.post(`merchant/user/login-v3`, data)
+      const response = await axiosInstance.post(`merchant/user/login-v4`, data)
+      return response.data
+    } catch (error) {
+      console.error(error)
+      throw error
+    }
+  }
+
+  const verifyOtpAuthV4 = async (data) => {
+    try {
+      const response = await axiosInstance.post(`merchant/user/verify-login-v4`, data)
       return response.data
     } catch (error) {
       console.error(error)
@@ -53,7 +63,8 @@ const AuthService = () => {
   return {
     verifyOtpAuth,
     sendOtpAuth,
-    loginAuth,
+    loginAuthV4,
+    verifyOtpAuthV4,
     logout
   }
 }

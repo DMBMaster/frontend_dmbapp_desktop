@@ -1,10 +1,10 @@
 {
   "name": "satudmb-desktopapp-new",
-  "version": "1.0.8",
-  "description": "An Electron application with React",
+  "version": "1.0.9",
+  "description": "Sistem Property Management lengkap dengan Front Office, Back Office, Channel Manager, dan Booking Engine untuk meningkatkan efisiensi dan pendapatan hotel Anda.",
   "main": "./out/main/index.js",
   "author": "PT Damai Nusa Abadi",
-  "homepage": "https://electron-vite.org",
+  "homepage": "https://satudmb.com",
   "scripts": {
     "format": "prettier --write .",
     "lint": "eslint --cache .",
