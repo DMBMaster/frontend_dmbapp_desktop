@@ -15,8 +15,9 @@ import {
 } from '@renderer/utils/myFunctions'
 import MediaService from '@renderer/services/mediaService'
 import { useNotifier } from '@renderer/components/core/NotificationProvider'
-import { listOutlets } from '@renderer/utils/config'
+import { listOutlets, userRole } from '@renderer/utils/config'
 import { useDebounce } from '@uidotdev/usehooks'
+import { usePermissions } from '@renderer/store/usePermission'
 
 const getCategoryName = (categoryName) => {
   switch (categoryName) {
@@ -51,6 +52,7 @@ export const UseIndex = () => {
   const mediaService = MediaService()
 
   const isOnline = useNetworkStore((state) => state.isOnline)
+  const permissions = usePermissions(userRole)
 
   const [data, setData] = useState([])
   const [categoryData, setCategoryData] = useState([])
@@ -232,9 +234,8 @@ export const UseIndex = () => {
     }
 
     const outletNameForFile = outletName.replace(/[^a-zA-Z0-9]/g, '_')
-    const filename = `Laporan_Pengeluaran_${outletNameForFile}_${
-      pageParams.startDate || formatDate(new Date())
-    }_${pageParams.endDate || formatDate(new Date())}.pdf`
+    const filename = `Laporan_Pengeluaran_${outletNameForFile}_${pageParams.startDate || formatDate(new Date())
+      }_${pageParams.endDate || formatDate(new Date())}.pdf`
     doc.save(filename)
   }
 
@@ -334,9 +335,8 @@ export const UseIndex = () => {
     XLSX.utils.book_append_sheet(wb, ws, 'Laporan Pengeluaran')
 
     const outletNameForFile = outletName.replace(/[^a-zA-Z0-9]/g, '_')
-    const fileName = `Laporan_Pengeluaran_${outletNameForFile}_${
-      pageParams.startDate || formatDate(new Date())
-    }_${pageParams.endDate || formatDate(new Date())}.xlsx`
+    const fileName = `Laporan_Pengeluaran_${outletNameForFile}_${pageParams.startDate || formatDate(new Date())
+      }_${pageParams.endDate || formatDate(new Date())}.xlsx`
 
     XLSX.writeFile(wb, fileName)
   }
@@ -344,7 +344,11 @@ export const UseIndex = () => {
   const fetchCategoryData = useCallback(async () => {
     setLoading((prev) => ({ ...prev, fetchCategoryData: true }))
     try {
-      const response = await expensesCategoryService.getExpensesCategories()
+      const params = {
+        p: 1,
+        ps: 100
+      }
+      const response = await expensesCategoryService.getExpensesCategories(params)
       setCategoryData(response.data || [])
     } catch (error) {
       notifier.show({
@@ -627,6 +631,7 @@ export const UseIndex = () => {
     setPageParams,
     isOnline,
     pendingCount,
-    syncPendingExpenses
+    syncPendingExpenses,
+    permissions
   }
 }

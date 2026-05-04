@@ -130,11 +130,7 @@ export const useAxiosInstanceB = () => {
           description: 'Harap login terlebih dahulu.',
           severity: 'warning'
         })
-        if (window.electron?.ipcRenderer) {
-          window.electron.ipcRenderer.send('logout')
-        } else {
-          navigate('/login')
-        }
+        navigate('/login')
         return Promise.reject(error)
       }
 

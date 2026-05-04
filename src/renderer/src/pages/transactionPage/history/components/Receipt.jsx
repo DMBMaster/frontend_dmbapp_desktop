@@ -1,464 +1,416 @@
-'use client'
-import { IconButton } from '@mui/material'
+/* eslint-disable react/prop-types */
+import { Button, CircularProgress, IconButton } from '@mui/material'
 import { IconPrinter } from '@tabler/icons-react'
-import React, { useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
+import ReceiptService from '@renderer/services/receiptService'
+import { buildReceiptHistoryHTML } from '@renderer/pages/transactionPage/create/components/printTransaction'
 
-const Receipt = (data) => {
-  console.log(data, 'isi data trx preview')
+const Receipt = ({ data }) => {
   const [showPreview, setShowPreview] = useState(false)
-  const printRef = useRef()
+  const [loadingSettings, setLoadingSettings] = useState(true)
+  const [receiptSettings, setReceiptSettings] = useState(null)
+  const [printing, setPrinting] = useState(false)
 
-  const numberFormat = (amount) => {
-    return new Intl.NumberFormat('id-ID').format(amount) // Using 'id-ID' for Indonesian formatting
-  }
+  const receiptService = ReceiptService()
 
-  const formatNumber = (amount) => {
-    return new Intl.NumberFormat('id-ID').format(amount) // Using 'id-ID' for Indonesian formatting
-  }
-
-  const receiptData = {
-    outlet_name: localStorage.getItem('outletName'),
-    outlet_address: localStorage.getItem('outletAddress'),
-    outlet_phone: localStorage.getItem('outletPhone'),
-    outlet_email: localStorage.getItem('outletEmail'),
-    outlet: localStorage.getItem('defaultOutlet'),
-    date: data.data.created_at,
-    invoice: data.data.transaction_no,
-    items: data.data.transaction_item.map((item) => ({
-      name: item.name,
-      qty: item.qty,
-      unitPrice: item.price,
-      total: item.qty * item.sub_total
-    })),
-    totalQty: data.data.transaction_item.reduce((sum, item) => sum + item.qty, 0),
-    total: data.data.grand_total,
-    grand_total: data.data.grand_total,
-    sub_total: data.data.sub_total,
-    paid: 300000,
-    change: 50000
-  }
-
-  const handlePrint = () => {
-    const printContents = printRef.current.innerHTML // Get the receipt content
-    const originalContents = document.body.innerHTML
-
-    document.body.innerHTML = printContents // Temporarily replace the page content
-    window.print() // Trigger the print dialog
-    document.body.innerHTML = originalContents // Restore the original content
-    window.location.reload() // Refresh the page to avoid display issues
-  }
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const cached = receiptService.getCachedReceiptSettings()
+        if (cached) {
+          setReceiptSettings(cached)
+          setLoadingSettings(false)
+          return
+        }
+        const merchantId = localStorage.getItem('outletGuid') || localStorage.getItem('outletId')
+        if (merchantId) {
+          const res = await receiptService.getReceiptSettings({ merchant_id: merchantId })
+          setReceiptSettings(res?.data ?? null)
+        }
+      } catch (err) {
+        console.error('Failed to load receipt settings:', err)
+      } finally {
+        setLoadingSettings(false)
+      }
+    }
+    load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const userData = JSON.parse(localStorage.getItem('loginData'))
 
-  return (
-    <>
-      <div ref={printRef} style={{ display: 'none' }} className="thermal-print">
-        <h3
-          style={{
-            marginBottom: '-1px',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center',
-            textAlign: 'center'
-          }}
-          className="store-name"
-        >
-          {localStorage.getItem('outletName')}
-        </h3>
-        {/* <p style={{
-                            fontSize:'11px',
-                            marginTop: '0px',
-                            flexDirection: "column",
-                            justifyContent: "center",
-                            alignItems: "center",
-                            textAlign: "center",
-                        }} className="store-address">{localStorage.getItem("outletAddress")}</p> */}
-        <p
-          style={{
-            fontSize: '11px',
-            marginTop: '-1px',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center',
-            textAlign: 'center'
-          }}
-          className="store-contact"
-        >
-          {localStorage.getItem('outletPhone')}
-        </p>
-        <p
-          style={{
-            marginTop: '-12px',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center',
-            textAlign: 'center'
-          }}
-          className="divider"
-        >
-          ----------------------------
-        </p>
+  const getSettings = () => {
+    const base = {
+      paperSize: 'MM58',
+      showBusinessName: true,
+      showOutletName: true,
+      showAddress: true,
+      showPhone: true,
+      showEmail: false,
+      showNoteNumber: true,
+      showTransactionTime: true,
+      showCashierPaymentName: true,
+      showCustomer: true,
+      showUnitPrice: true,
+      showNotes: true,
+      customFooterText: false,
+      footerText: ''
+    }
+    return receiptSettings ? { ...base, ...receiptSettings } : base
+  }
 
-        <p
-          style={{
-            marginTop: '-10px',
-            marginBottom: '18px',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center',
-            textAlign: 'center'
-          }}
-          className="divider"
-        >
-          <b>Bill</b>
-        </p>
+  const toNumber = (v) => {
+    const n = Number(v)
+    return Number.isFinite(n) ? n : 0
+  }
+  const fmt = (v) => new Intl.NumberFormat('id-ID').format(toNumber(v))
 
-        <p
-          style={{
-            marginTop: '-10px'
-          }}
-        >
-          ID Transaksi : {data.data.transaction_no}
-        </p>
-        {localStorage.getItem('outletCategoryId') === '1' && (
-          <p style={{ marginTop: '-12px' }}>
-            Tanggal :{' '}
-            {data.data.booking_date
-              ? new Date(data.data.booking_date).toLocaleString('en-GB', {
-                  day: '2-digit',
-                  month: '2-digit',
-                  year: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  second: '2-digit'
-                })
-              : '-'}
-          </p>
-        )}
+  const buildOrder = () => {
+    const settings = getSettings()
+    const transactionItems = Array.isArray(data?.transaction_item) ? data.transaction_item : []
 
-        {localStorage.getItem('outletCategoryId') !== '1' && (
-          <p style={{ marginTop: '-12px' }}>
-            Tanggal :{' '}
-            {data.data.created_at
-              ? new Date(data.data.created_at).toLocaleString('en-GB', {
-                  day: '2-digit',
-                  month: '2-digit',
-                  year: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  second: '2-digit'
-                })
-              : '-'}
-          </p>
-        )}
-        <p style={{ marginTop: '-12px' }}>
-          Waktu Cetak :{' '}
-          {new Date().toLocaleString('en-GB', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit'
-          })}
-        </p>
+    // Normalize printData from settings
+    const rawPrintData = receiptSettings?.printData
+    let normalizedPrintData = {}
+    if (Array.isArray(rawPrintData)) {
+      rawPrintData.forEach((item) => {
+        if (item && typeof item === 'object' && item.name) {
+          normalizedPrintData[item.name] = item.value
+        }
+      })
+    } else if (typeof rawPrintData === 'object' && rawPrintData !== null) {
+      normalizedPrintData = rawPrintData
+    }
 
-        <p
-          style={{
-            marginTop: '-10px'
-          }}
-        >
-          Nama Kasir : {userData?.full_name}
-        </p>
-        {data.data.no_polisi?.trim() && (
-          <p style={{ marginTop: '-10px' }}>Nomor Polisi : {data.data.no_polisi}</p>
-        )}
-        {/* <p style={{
-                    marginTop: '-12px',
-                }}>Jatuh Tempo : {invoice.due_date ? new Date(invoice?.due_date).toLocaleDateString('en-GB', {
-                    day: '2-digit', month: '2-digit', year: 'numeric'
-                }) : '-'}</p> */}
-        {/* {data.data.ticket?.customer_id.trim() && (
-                <p style={{
-                    marginTop: '-12px',
-                }}>Pelanggan : {invoice.to_company_name}</p>
-                )} */}
-        <p
-          style={{
-            marginTop: '-12px',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center',
-            textAlign: 'center'
-          }}
-          className="divider"
-        >
-          ----------------------------
-        </p>
+    return {
+      businessName:
+        normalizedPrintData.businessName ||
+        localStorage.getItem('merchantName') ||
+        localStorage.getItem('outletName') ||
+        '',
+      outletName: normalizedPrintData.outletName || localStorage.getItem('outletName') || '',
+      outletAddress: normalizedPrintData.address || localStorage.getItem('outletAddress') || '',
+      phone: normalizedPrintData.phone || localStorage.getItem('outletPhone') || '',
+      email: normalizedPrintData.email || localStorage.getItem('outletEmail') || '',
+      city: normalizedPrintData.city || localStorage.getItem('outletCity') || '',
+      province: normalizedPrintData.province || localStorage.getItem('outletProvince') || '',
+      country: normalizedPrintData.country || localStorage.getItem('outletCountry') || '',
+      outletCategoryId: localStorage.getItem('outletCategoryId'),
+      transactionNo: data?.transaction_no || '',
+      createdAt: data?.created_at,
+      bookingDate: data?.booking_date,
+      cashierName: userData?.full_name || '-',
+      reservationName: data?.reservation_name || '',
+      noPolisi: data?.no_polisi || '',
+      items: transactionItems.map((item) => ({
+        name: item.name,
+        qty: toNumber(item.qty),
+        price: toNumber(item.price),
+        subTotal: toNumber(item.sub_total)
+      })),
+      subTotal: toNumber(data?.sub_total),
+      discountNominal: toNumber(data?.discount_nominal ?? 0),
+      grandTotal: toNumber(data?.grand_total),
+      status: data?.status,
+      paidBy: data?.paid_by,
+      paidCash: toNumber(data?.paid_cash),
+      returnCash: toNumber(data?.return_cash ?? 0),
+      printCount: data?.print_count ?? 0,
+      lastPrintedBy: data?.last_printed_by,
+      lastPrintedAt: data?.last_printed_at,
+      footer: settings.footerText || 'Terima kasih atas kunjungan Anda'
+    }
+  }
 
-        <table
-          border="0"
-          style={{
-            borderCollapse: 'collapse',
-            width: '100%',
-            textAlign: 'left',
-            fontFamily: 'Arial, sans-serif'
-          }}
-        >
-          <tbody>
-            {data.data.transaction_item.map((item, index) => (
-              <React.Fragment key={index}>
-                {/* Row for item name */}
-                <tr>
-                  <td colSpan="3" style={{ padding: '0px', fontWeight: 'bold' }}>
-                    {item.name}
-                  </td>
-                </tr>
+  const handlePrint = async () => {
+    setPrinting(true)
+    try {
+      const settings = getSettings()
+      const order = buildOrder()
+      const contentHTML = buildReceiptHistoryHTML(order, settings)
+      const dataToprint = {
+        header1: '',
+        header2: '',
+        header3: '',
+        contentHTML,
+        footer1: '',
+        footer2: '',
+        footer3: '',
+        paperSize: settings.paperSize || 'MM58',
+        copies: 1,
+        receiptSettings: settings
+      }
+      const result = await window.api.printOrderReceipt(dataToprint)
+      if (!result?.success) {
+        console.error('Print receipt gagal:', result?.error || 'Unknown error')
+      }
+      setShowPreview(false)
+    } catch (err) {
+      console.error('Print receipt error:', err)
+    } finally {
+      setPrinting(false)
+    }
+  }
 
-                {/* Row for qty x price and subtotal */}
-                <tr>
-                  <td style={{ padding: '0px', textAlign: 'left', width: '50%' }}>
-                    {item.qty} x {item.price.toLocaleString('id-ID')}
-                  </td>
-                  <td style={{ padding: '0px', textAlign: 'right', width: '50%' }}>
-                    {item.sub_total.toLocaleString('id-ID')}
-                  </td>
-                </tr>
-              </React.Fragment>
-            ))}
-          </tbody>
-        </table>
-        <p
-          style={{
-            marginTop: '5px',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center',
-            textAlign: 'center'
-          }}
-          className="divider"
-        >
-          ----------------------------
-        </p>
+  const renderPreview = () => {
+    const settings = getSettings()
+    const paperMaxWidth = settings.paperSize === 'MM80' ? '320px' : '240px'
+    const transactionItems = Array.isArray(data?.transaction_item) ? data.transaction_item : []
 
-        <table
-          border="0"
+    const outletCategoryId = localStorage.getItem('outletCategoryId')
+    const rawDate =
+      outletCategoryId === '1'
+        ? data?.booking_date || data?.created_at
+        : data?.created_at || data?.booking_date
+
+    // Normalize printData
+    const rawPrintData = receiptSettings?.printData
+    let normalizedPrintData = {}
+    if (Array.isArray(rawPrintData)) {
+      rawPrintData.forEach((item) => {
+        if (item && typeof item === 'object' && item.name) {
+          normalizedPrintData[item.name] = item.value
+        }
+      })
+    } else if (typeof rawPrintData === 'object' && rawPrintData !== null) {
+      normalizedPrintData = rawPrintData
+    }
+
+    const printData = {
+      businessName:
+        normalizedPrintData.businessName ||
+        localStorage.getItem('merchantName') ||
+        localStorage.getItem('outletName') ||
+        '',
+      outletName: normalizedPrintData.outletName || localStorage.getItem('outletName') || '',
+      address: normalizedPrintData.address || localStorage.getItem('outletAddress') || '',
+      phone: normalizedPrintData.phone || localStorage.getItem('outletPhone') || '',
+      email: normalizedPrintData.email || localStorage.getItem('outletEmail') || ''
+    }
+
+    const headerText = settings.headerText || settings.header || ''
+    const footerText =
+      settings.customFooterText && (settings.footerText || settings.footer)
+        ? settings.footerText || settings.footer
+        : 'Terima kasih atas kunjungan Anda'
+
+    return (
+      <div
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 9999
+        }}
+      >
+        <div
           style={{
-            borderCollapse: 'collapse',
-            fontFamily: 'Arial, sans-serif',
-            width: '100%' // Ensures the table stretches across the available space
+            background: '#fff',
+            padding: '20px',
+            width: paperMaxWidth,
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            borderRadius: '5px',
+            boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
           }}
         >
-          <tbody>
-            <tr>
-              <td style={{ textAlign: 'left', fontWeight: 'bold' }}>Jumlah Item</td>
-              <td style={{ textAlign: 'right' }}>
-                {numberFormat(data.data.transaction_item.reduce((sum, item) => sum + item.qty, 0))}
-              </td>
-            </tr>
-            <tr>
-              <td style={{ textAlign: 'left', fontWeight: 'bold' }}>Metode Bayar</td>
-              <td style={{ textAlign: 'right' }}>{data.data.paid_by}</td>
-            </tr>
-            <tr>
-              <td style={{ textAlign: 'left', fontWeight: 'bold' }}>Status</td>
-              <td style={{ textAlign: 'right' }}>
-                {data.data.status == 'PAID' ? 'Sudah Bayar' : 'Belum Bayar'}
-              </td>
-            </tr>
-            <tr>
-              <td style={{ textAlign: 'left', fontWeight: 'bold' }}>Sub Total</td>
-              <td style={{ textAlign: 'right' }}>{numberFormat(data.data.sub_total)}</td>
-            </tr>
-            <tr>
-              <td style={{ textAlign: 'left', fontWeight: 'bold' }}>Diskon</td>
-              <td style={{ textAlign: 'right' }}>
-                {formatNumber(data.data.discount_nominal ?? 0)}
-              </td>
-            </tr>
-            {/* <tr>
-                            <td style={{ textAlign: "left", fontWeight: "bold" }}>PPN</td>
-                            <td style={{ textAlign: "right" }}>{numberFormat(invoice.sum_tax)}</td>
-                        </tr> */}
-            <tr>
-              <td style={{ textAlign: 'left', fontWeight: 'bold' }}>
-                <b>Grand Total</b>
-              </td>
-              <td style={{ textAlign: 'right', fontWeight: 'bold' }}>
-                <b>{formatNumber(data.data.grand_total)}</b>
-              </td>
-            </tr>
-            {data.data.status == 'PAID' && data.data.paid_by == 'Cash' && (
-              <tr>
-                <td style={{ textAlign: 'left', fontWeight: 'bold' }}>
-                  <b>Bayar</b>
-                </td>
-                <td style={{ textAlign: 'right', fontWeight: 'bold' }}>
-                  <b>{formatNumber(data.data.paid_cash)}</b>
-                </td>
-              </tr>
-            )}
-            {data.data.status == 'PAID' && data.data.paid_by == 'Cash' && (
-              <tr>
-                <td style={{ textAlign: 'left', fontWeight: 'bold' }}>
-                  <b>Kembalian</b>
-                </td>
-                <td style={{ textAlign: 'right', fontWeight: 'bold' }}>
-                  <b>{formatNumber(data.data.return_cash)}</b>
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-        <p
-          style={{
-            marginTop: '5px',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center',
-            textAlign: 'center'
-          }}
-          className="divider"
-        >
-          ----------------------------
-        </p>
-        {/* <div
-                    style={{
-                        display: "grid",
-                        gridTemplateColumns: "1fr 1fr",
-                        gap: "20px",
-                        marginTop: "20px",
-                        textAlign: "center",
-                    }}
+          <div style={{ fontFamily: 'monospace', fontSize: '11px', color: '#000' }}>
+            {/* Header */}
+            <div style={{ textAlign: 'center', marginBottom: '8px' }}>
+              {settings.showBusinessName && printData.businessName && (
+                <div style={{ fontWeight: 'bold', fontSize: '14px' }}>{printData.businessName}</div>
+              )}
+              {settings.showOutletName && printData.outletName && (
+                <div style={{ fontSize: '12px' }}>{printData.outletName}</div>
+              )}
+              {settings.showAddress && printData.address && (
+                <div style={{ fontSize: '11px' }}>{printData.address}</div>
+              )}
+              {settings.showEmail && printData.email && (
+                <div style={{ fontSize: '11px' }}>{printData.email}</div>
+              )}
+              {settings.showPhone && printData.phone && (
+                <div style={{ fontSize: '11px' }}>{printData.phone}</div>
+              )}
+              {settings.customHeaderText && headerText && (
+                <div
+                  style={{
+                    marginTop: '4px',
+                    paddingTop: '4px',
+                    borderTop: '1px dashed #ccc',
+                    fontSize: '11px'
+                  }}
                 >
-                    <div>
-                        <p>Dibuat oleh</p>
-                        <div
-                            style={{
-                                borderBottom: "1px solid black",
-                                width: "80%",
-                                margin: "80px auto 20px auto"
-                            }}
-                        ></div>
-                    </div>
-                    <div>
-                        <p>Diperiksa Oleh</p>
-                        <div
-                            style={{
-                                borderBottom: "1px solid black",
-                                width: "80%",
-                                margin: "80px auto 20px auto"
-                            }}
-                        ></div>
-                    </div>
-                    <div>
-                        <p>Disetujui Oleh</p>
-                        <div
-                            style={{
-                                borderBottom: "1px solid black",
-                                width: "80%",
-                                margin: "80px auto 20px auto"
-                            }}
-                        ></div>
-                    </div>
-                    <div>
-                        <p>Diterima Oleh</p>
-                        <div
-                            style={{
-                                borderBottom: "1px solid black",
-                                width: "80%",
-                                margin: "80px auto 20px auto"
-                            }}
-                        ></div>
-                        <p style={{ marginTop: '-10px' }}>Pelanggan</p>
-                    </div>
-                </div> */}
-        <p
-          style={{
-            marginTop: '30px',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center',
-            textAlign: 'center'
-          }}
-          className="thank-you"
-        >
-          Thank you for your purchase!
-        </p>
-      </div>
-      <div>
-        <IconButton onClick={() => setShowPreview(true)} variant="contained" color="info">
-          <IconPrinter />
-        </IconButton>
-        {/* <button onClick={() => setShowPreview(true)}>Preview Receipt</button> */}
-
-        {/* Preview Modal */}
-        {showPreview && (
-          <div
-            style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              background: 'rgba(0,0,0,0.5)',
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center'
-            }}
-          >
-            <div
-              style={{ background: '#fff', padding: '20px', width: '300px', borderRadius: '5px' }}
-            >
-              {/* Receipt Preview */}
-              <div style={{ fontFamily: 'monospace', fontSize: '12px' }}>
-                <p style={{ textAlign: 'center' }}>Receipt</p>
-                <p style={{ textAlign: 'center' }}>{receiptData.date}</p>
-                <p>ID Transaksi: {receiptData.invoice}</p>
-                <hr />
-                {receiptData.items.map((item, index) => (
-                  <div key={index} style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>
-                      {item.qty} x {item.name}
-                    </span>
-                    <span>Rp {item.total.toLocaleString()}</span>
-                  </div>
-                ))}
-                <hr />
-                {/* <div style={{ display: "flex", justifyContent: "space-between" }}>
-                                    <span>Total Qty:</span>
-                                    <span>{receiptData.totalQty}</span>
-                                </div> */}
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Sub Total:</span>
-                  <span>Rp {receiptData.sub_total.toLocaleString()}</span>
+                  {headerText}
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Grand Total:</span>
-                  <span>Rp {receiptData.grand_total.toLocaleString()}</span>
-                </div>
-                {/* <div style={{ display: "flex", justifyContent: "space-between" }}>
-                                <span>Diskon :</span>
-                                <span>Rp {receiptData.paid.toLocaleString()}</span>
-                            </div>
-                            <div style={{ display: "flex", justifyContent: "space-between" }}>
-                                <span>Change:</span>
-                                <span>Rp {receiptData.change.toLocaleString()}</span>
-                            </div> */}
-                <hr />
-                <p style={{ textAlign: 'center' }}>Thank you for your trust!</p>
-              </div>
+              )}
+            </div>
 
-              <div style={{ textAlign: 'center', marginTop: '10px' }}>
-                <button onClick={handlePrint} style={{ marginRight: '10px' }}>
-                  Print
-                </button>
-                <button onClick={() => setShowPreview(false)}>Close</button>
+            <div style={{ textAlign: 'center', margin: '5px 0' }}>----------------------------</div>
+
+            {/* Transaction Info */}
+            <div style={{ fontSize: '11px', marginBottom: '8px' }}>
+              {settings.showNoteNumber && (
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>No Nota:</span>
+                  <span>{data?.transaction_no}</span>
+                </div>
+              )}
+              {settings.showTransactionTime && (
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Waktu:</span>
+                  <span>{rawDate ? new Date(rawDate).toLocaleString('id-ID') : '-'}</span>
+                </div>
+              )}
+              {settings.showCashierPaymentName && (
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Kasir:</span>
+                  <span>{userData?.full_name || '-'}</span>
+                </div>
+              )}
+              {settings.showCustomer && data?.reservation_name && (
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Customer:</span>
+                  <span>{data.reservation_name}</span>
+                </div>
+              )}
+              {data?.no_polisi?.trim() && (
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>No Polisi:</span>
+                  <span>{data.no_polisi}</span>
+                </div>
+              )}
+            </div>
+
+            <div style={{ textAlign: 'center', margin: '5px 0' }}>----------------------------</div>
+
+            {/* Items */}
+            {transactionItems.map((item, idx) => (
+              <div key={idx} style={{ marginBottom: '5px' }}>
+                <div style={{ fontWeight: 'bold' }}>{item.name}</div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>
+                    {toNumber(item.qty)} x {fmt(item.price)}
+                  </span>
+                  <span>{fmt(item.sub_total)}</span>
+                </div>
               </div>
+            ))}
+
+            <div style={{ textAlign: 'center', margin: '5px 0' }}>----------------------------</div>
+
+            {/* Summary */}
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>Sub Total:</span>
+              <span>{fmt(data?.sub_total)}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>Diskon:</span>
+              <span>{fmt(data?.discount_nominal ?? 0)}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold' }}>
+              <span>Grand Total:</span>
+              <span>{fmt(data?.grand_total)}</span>
+            </div>
+            {data?.status === 'PAID' && data?.paid_by === 'Cash' && (
+              <>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Bayar:</span>
+                  <span>{fmt(data.paid_cash)}</span>
+                </div>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  <span>Kembalian:</span>
+                  <span>{fmt(data.return_cash ?? 0)}</span>
+                </div>
+              </>
+            )}
+
+            <div style={{ textAlign: 'center', margin: '5px 0' }}>----------------------------</div>
+
+            {/* Footer */}
+            <div style={{ textAlign: 'center', fontSize: '11px', marginTop: '8px' }}>
+              {data?.print_count > 0 && (
+                <div
+                  style={{
+                    fontSize: '9px',
+                    color: '#666',
+                    fontStyle: 'italic',
+                    marginBottom: '4px'
+                  }}
+                >
+                  Terakhir dicetak: {data.last_printed_by} (
+                  {data.last_printed_at
+                    ? new Date(data.last_printed_at).toLocaleString('id-ID')
+                    : '-'}
+                  )
+                  <br />
+                  Total Cetak: {data.print_count}x
+                </div>
+              )}
+              <div>{footerText}</div>
             </div>
           </div>
-        )}
+
+          <div
+            style={{
+              textAlign: 'center',
+              marginTop: '16px',
+              display: 'flex',
+              gap: '10px',
+              justifyContent: 'center'
+            }}
+          >
+            <Button
+              variant="contained"
+              color="primary"
+              size="small"
+              disabled={printing}
+              onClick={handlePrint}
+              startIcon={printing ? <CircularProgress size={14} /> : undefined}
+            >
+              {printing ? 'Mencetak...' : 'Print'}
+            </Button>
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={() => setShowPreview(false)}
+              disabled={printing}
+            >
+              Close
+            </Button>
+          </div>
+        </div>
       </div>
+    )
+  }
+
+  if (loadingSettings) {
+    return (
+      <IconButton disabled>
+        <CircularProgress size={20} />
+      </IconButton>
+    )
+  }
+
+  return (
+    <>
+      <IconButton onClick={() => setShowPreview(true)} color="info">
+        <IconPrinter />
+      </IconButton>
+
+      {showPreview && renderPreview()}
     </>
   )
 }

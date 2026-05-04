@@ -1,347 +1,322 @@
-'use client'
-import { Button } from '@mui/material'
-import React, { useRef, useState } from 'react'
+/* eslint-disable react/prop-types */
+import { Button, CircularProgress, IconButton } from '@mui/material'
+import { useEffect, useState } from 'react'
+import ReceiptService from '@renderer/services/receiptService'
+import { buildCOReceiptHTML } from '@renderer/pages/transactionPage/create/components/printTransaction'
 
-const CO = (data) => {
+const CO = ({ data }) => {
   const [showPreview, setShowPreview] = useState(false)
-  const printRef = useRef()
+  const [loadingSettings, setLoadingSettings] = useState(true)
+  const [receiptSettings, setReceiptSettings] = useState(null)
+  const [printing, setPrinting] = useState(false)
 
-  const receiptData = {
-    outlet_name: localStorage.getItem('outletName'),
-    outlet_address: localStorage.getItem('outletAddress'),
-    outlet_phone: localStorage.getItem('outletPhone'),
-    outlet_email: localStorage.getItem('outletEmail'),
-    outlet: localStorage.getItem('defaultOutlet'),
-    date: data.data.created_at,
-    invoice: data.data.transaction_no,
-    items: data.data.transaction_item.map((item) => ({
-      name: item.name,
-      qty: item.qty,
-      unitPrice: item.price,
-      total: item.qty * item.sub_total
-    })),
-    totalQty: data.data.transaction_item.reduce((sum, item) => sum + item.qty, 0),
-    total: data.data.grand_total,
-    grand_total: data.data.grand_total,
-    sub_total: data.data.sub_total,
-    paid: 300000,
-    change: 50000
-  }
+  const receiptService = ReceiptService()
 
-  const handlePrint = () => {
-    const printContents = printRef.current.innerHTML // Get the receipt content
-    const originalContents = document.body.innerHTML
-
-    document.body.innerHTML = printContents // Temporarily replace the page content
-    window.print() // Trigger the print dialog
-    document.body.innerHTML = originalContents // Restore the original content
-    window.location.reload() // Refresh the page to avoid display issues
-  }
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const cached = receiptService.getCachedReceiptSettings()
+        if (cached) {
+          setReceiptSettings(cached)
+          setLoadingSettings(false)
+          return
+        }
+        const merchantId =
+          localStorage.getItem('outletGuid') || localStorage.getItem('outletId')
+        if (merchantId) {
+          const res = await receiptService.getReceiptSettings({ merchant_id: merchantId })
+          setReceiptSettings(res?.data ?? null)
+        }
+      } catch (err) {
+        console.error('Failed to load receipt settings for CO:', err)
+      } finally {
+        setLoadingSettings(false)
+      }
+    }
+    load()
+  }, [])
 
   const userData = JSON.parse(localStorage.getItem('loginData'))
 
-  return (
-    <>
-      <div ref={printRef} style={{ display: 'none' }} className="thermal-print">
-        <h3
-          style={{
-            marginBottom: '-1px',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center',
-            textAlign: 'center'
-          }}
-          className="store-name"
-        >
-          {localStorage.getItem('outletName')}
-        </h3>
-        {/* <p style={{
-                            fontSize:'11px',
-                            marginTop: '0px',
-                            flexDirection: "column",
-                            justifyContent: "center",
-                            alignItems: "center",
-                            textAlign: "center",
-                        }} className="store-address">{localStorage.getItem("outletAddress")}</p> */}
-        <p
-          style={{
-            fontSize: '11px',
-            marginTop: '-1px',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center',
-            textAlign: 'center'
-          }}
-          className="store-contact"
-        >
-          {localStorage.getItem('outletPhone')}
-        </p>
-        <p
-          style={{
-            marginTop: '-12px',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center',
-            textAlign: 'center'
-          }}
-          className="divider"
-        >
-          ----------------------------
-        </p>
+  const buildOrder = () => ({
+    outletName: localStorage.getItem('outletName') || '',
+    businessName: localStorage.getItem('outletName') || '',
+    outletAddress: localStorage.getItem('outletAddress') || '',
+    city: localStorage.getItem('outletCity') || '',
+    province: localStorage.getItem('outletProvince') || '',
+    country: localStorage.getItem('outletCountry') || '',
+    email: localStorage.getItem('outletEmail') || '',
+    phone: localStorage.getItem('outletPhone') || '',
+    outletCategoryId: localStorage.getItem('outletCategoryId'),
+    transactionNo: data.transaction_no,
+    createdAt: data.created_at,
+    bookingDate: data.booking_date,
+    cashierName: userData?.full_name || '-',
+    reservationName: data.reservation_name || '',
+    noPolisi: data.no_polisi || '',
+    items: Array.isArray(data.transaction_item)
+      ? data.transaction_item.map((item) => ({
+          name: item.name,
+          qty: item.qty,
+          price: item.price,
+          subTotal: item.sub_total
+        }))
+      : [],
+    subTotal: data.sub_total,
+    discountNominal: data.discount_nominal ?? 0,
+    grandTotal: data.grand_total,
+    status: data.status,
+    paidBy: data.paid_by,
+    paidCash: data.paid_cash,
+    returnCash: data.return_cash,
+    printCount: data.print_count ?? 0,
+    lastPrintedBy: data.last_printed_by,
+    lastPrintedAt: data.last_printed_at
+  })
 
-        <p
-          style={{
-            marginTop: '-10px',
-            marginBottom: '18px',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center',
-            textAlign: 'center'
-          }}
-          className="divider"
-        >
-          <b>CO</b>
-        </p>
+  const getSettings = () =>
+    receiptSettings || {
+      paperSize: 'MM58',
+      showBusinessName: true,
+      showOutletName: true,
+      showAddress: true,
+      showPhone: true,
+      showEmail: false,
+      showNoteNumber: true,
+      showTransactionTime: true,
+      showCashierPaymentName: true,
+      showCustomer: true,
+      showNotes: true
+    }
 
-        <p
-          style={{
-            marginTop: '-10px'
-          }}
-        >
-          ID Transaksi : {data.data.transaction_no}
-        </p>
-        {localStorage.getItem('outletCategoryId') === '1' && (
-          <p style={{ marginTop: '-12px' }}>
-            Tanggal :{' '}
-            {data.data.booking_date
-              ? new Date(data.data.booking_date).toLocaleString('en-GB', {
-                  day: '2-digit',
-                  month: '2-digit',
-                  year: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  second: '2-digit'
-                })
-              : '-'}
-          </p>
-        )}
+  const handlePrint = async () => {
+    setPrinting(true)
+    try {
+      const order = buildOrder()
+      const settings = getSettings()
+      const contentHTML = buildCOReceiptHTML(order, settings)
+      const dataToprint = {
+        header1: '',
+        header2: '',
+        header3: '',
+        contentHTML,
+        footer1: '',
+        footer2: '',
+        footer3: '',
+        paperSize: settings.paperSize || 'MM58',
+        copies: 1,
+        receiptSettings: settings
+      }
+      const result = await window.api.printOrderReceipt(dataToprint)
+      if (!result?.success) {
+        console.error('Print CO gagal:', result?.error || 'Unknown error')
+      }
+      setShowPreview(false)
+    } catch (err) {
+      console.error('Print CO error:', err)
+    } finally {
+      setPrinting(false)
+    }
+  }
 
-        {localStorage.getItem('outletCategoryId') !== '1' && (
-          <p style={{ marginTop: '-12px' }}>
-            Tanggal :{' '}
-            {data.data.created_at
-              ? new Date(data.data.created_at).toLocaleString('en-GB', {
-                  day: '2-digit',
-                  month: '2-digit',
-                  year: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  second: '2-digit'
-                })
-              : '-'}
-          </p>
-        )}
-        <p style={{ marginTop: '-12px' }}>
-          Waktu Cetak :{' '}
-          {new Date().toLocaleString('en-GB', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit'
-          })}
-        </p>
+  const renderPreview = () => {
+    const settings = getSettings()
+    const paperMaxWidth = settings.paperSize === 'MM80' ? '320px' : '240px'
+    const order = buildOrder()
+    const toNumber = (v) => {
+      const n = Number(v)
+      return Number.isFinite(n) ? n : 0
+    }
+    const fmt = (v) => new Intl.NumberFormat('id-ID').format(toNumber(v))
+    const rawDate =
+      order.outletCategoryId === '1' || order.outletCategoryId === 1
+        ? order.bookingDate || order.createdAt
+        : order.createdAt || order.bookingDate
 
-        <p
+    return (
+      <div
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 9999
+        }}
+      >
+        <div
           style={{
-            marginTop: '-10px'
+            background: '#fff',
+            padding: '20px',
+            width: paperMaxWidth,
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            borderRadius: '5px',
+            boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
           }}
         >
-          Nama Kasir : {userData?.full_name}
-        </p>
-        {data.data.no_polisi?.trim() && (
-          <p style={{ marginTop: '-10px' }}>Nomor Polisi : {data.data.no_polisi}</p>
-        )}
-        {/* <p style={{
-                    marginTop: '-12px',
-                }}>Jatuh Tempo : {invoice.due_date ? new Date(invoice?.due_date).toLocaleDateString('en-GB', {
-                    day: '2-digit', month: '2-digit', year: 'numeric'
-                }) : '-'}</p> */}
-        {/* {data.data.ticket?.customer_id.trim() && (
-                <p style={{
-                    marginTop: '-12px',
-                }}>Pelanggan : {invoice.to_company_name}</p>
-                )} */}
-        <p
-          style={{
-            marginTop: '-12px',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center',
-            textAlign: 'center'
-          }}
-          className="divider"
-        >
-          ----------------------------
-        </p>
+          <div style={{ fontFamily: 'monospace', fontSize: '11px', color: '#000' }}>
+            {/* Header */}
+            {settings.showBusinessName && order.businessName && (
+              <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: '14px' }}>
+                {order.businessName}
+              </div>
+            )}
+            {settings.showAddress && order.outletAddress && (
+              <div style={{ textAlign: 'center', fontSize: '11px' }}>{order.outletAddress}</div>
+            )}
+            {settings.showPhone && order.phone && (
+              <div style={{ textAlign: 'center', fontSize: '11px' }}>{order.phone}</div>
+            )}
 
-        <table
-          border="0"
-          style={{
-            borderCollapse: 'collapse',
-            width: '100%',
-            textAlign: 'left',
-            fontFamily: 'Arial, sans-serif'
-          }}
-        >
-          <tbody>
-            {data.data.transaction_item.map((item, index) => (
-              <React.Fragment key={index}>
-                <tr>
-                  <td style={{ padding: '0px', textAlign: 'left', width: '50%' }}>
-                    {item.qty} x {item.name}
-                  </td>
-                </tr>
-              </React.Fragment>
+            <div style={{ borderTop: '2px solid #111', margin: '4px 0' }} />
+            <div style={{ textAlign: 'center', fontWeight: 'bold', letterSpacing: '2px' }}>
+              CHECK OUT
+            </div>
+            <div style={{ borderTop: '2px solid #111', margin: '4px 0' }} />
+
+            {/* Transaction Info */}
+            {settings.showNoteNumber && (
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span>No Nota:</span>
+                <span>{order.transactionNo}</span>
+              </div>
+            )}
+            {settings.showTransactionTime && (
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span>Waktu:</span>
+                <span>{rawDate ? new Date(rawDate).toLocaleString('id-ID') : '-'}</span>
+              </div>
+            )}
+            {settings.showCashierPaymentName && (
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span>Kasir:</span>
+                <span>{order.cashierName}</span>
+              </div>
+            )}
+            {settings.showCustomer && order.reservationName && (
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span>Customer:</span>
+                <span>{order.reservationName}</span>
+              </div>
+            )}
+            {order.noPolisi && String(order.noPolisi).trim() && (
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span>No Polisi:</span>
+                <span>{order.noPolisi}</span>
+              </div>
+            )}
+
+            <div style={{ borderTop: '2px solid #111', margin: '5px 0' }} />
+
+            {/* Items */}
+            {order.items.map((item, idx) => (
+              <div key={idx} style={{ marginBottom: '4px' }}>
+                <div style={{ fontWeight: 'bold' }}>{item.name}</div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>
+                    {toNumber(item.qty)} x {fmt(item.price)}
+                  </span>
+                  <span>{fmt(item.subTotal ?? toNumber(item.qty) * toNumber(item.price))}</span>
+                </div>
+              </div>
             ))}
-          </tbody>
-        </table>
-        <p
-          style={{
-            marginTop: '5px',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center',
-            textAlign: 'center'
-          }}
-          className="divider"
-        >
-          ----------------------------
-        </p>
 
-        {/* <div
-                    style={{
-                        display: "grid",
-                        gridTemplateColumns: "1fr 1fr",
-                        gap: "20px",
-                        marginTop: "20px",
-                        textAlign: "center",
-                    }}
+            <div style={{ borderTop: '2px solid #111', margin: '5px 0' }} />
+
+            {/* Summary */}
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>Sub Total:</span>
+              <span>{fmt(order.subTotal)}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>Diskon:</span>
+              <span>{fmt(order.discountNominal ?? 0)}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold' }}>
+              <span>Grand Total:</span>
+              <span>{fmt(order.grandTotal)}</span>
+            </div>
+            {order.status === 'PAID' && order.paidBy === 'Cash' && (
+              <>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Bayar:</span>
+                  <span>{fmt(order.paidCash)}</span>
+                </div>
+                <div
+                  style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold' }}
                 >
-                    <div>
-                        <p>Dibuat oleh</p>
-                        <div
-                            style={{
-                                borderBottom: "1px solid black",
-                                width: "80%",
-                                margin: "80px auto 20px auto"
-                            }}
-                        ></div>
-                    </div>
-                    <div>
-                        <p>Diperiksa Oleh</p>
-                        <div
-                            style={{
-                                borderBottom: "1px solid black",
-                                width: "80%",
-                                margin: "80px auto 20px auto"
-                            }}
-                        ></div>
-                    </div>
-                    <div>
-                        <p>Disetujui Oleh</p>
-                        <div
-                            style={{
-                                borderBottom: "1px solid black",
-                                width: "80%",
-                                margin: "80px auto 20px auto"
-                            }}
-                        ></div>
-                    </div>
-                    <div>
-                        <p>Diterima Oleh</p>
-                        <div
-                            style={{
-                                borderBottom: "1px solid black",
-                                width: "80%",
-                                margin: "80px auto 20px auto"
-                            }}
-                        ></div>
-                        <p style={{ marginTop: '-10px' }}>Pelanggan</p>
-                    </div>
-                </div> */}
-        <p
-          style={{
-            marginTop: '30px',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center',
-            textAlign: 'center'
-          }}
-          className="thank-you"
-        >
-          Thank you for your purchase!
-        </p>
-      </div>
-      <div>
-        <Button
-          onClick={() => setShowPreview(true)}
-          variant="contained"
-          sx={{ borderRadius: '50%', minWidth: 40, width: 40, height: 40, padding: 0 }}
-        >
-          CO
-        </Button>
-        {/* <button onClick={() => setShowPreview(true)}>Preview Receipt</button> */}
+                  <span>Kembalian:</span>
+                  <span>{fmt(order.returnCash ?? 0)}</span>
+                </div>
+              </>
+            )}
 
-        {/* Preview Modal */}
-        {showPreview && (
-          <div
-            style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              background: 'rgba(0,0,0,0.5)',
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center'
-            }}
-          >
-            <div
-              style={{ background: '#fff', padding: '20px', width: '300px', borderRadius: '5px' }}
-            >
-              {/* Receipt Preview */}
-              <div style={{ fontFamily: 'monospace', fontSize: '12px' }}>
-                <p style={{ textAlign: 'center' }}>CO</p>
-                {/* <p style={{ textAlign: "center" }}>{receiptData.date}</p> */}
-                <p>ID Transaksi: {receiptData.invoice}</p>
-                <hr />
-                {receiptData.items.map((item, index) => (
-                  <div key={index} style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>
-                      {item.qty} x {item.name}
-                    </span>
-                    {/* <span>Rp {item.total.toLocaleString()}</span> */}
-                  </div>
-                ))}
-                <hr />
-                <p style={{ textAlign: 'center' }}>Thank you for your trust!</p>
-              </div>
-
-              <div style={{ textAlign: 'center', marginTop: '10px' }}>
-                <button onClick={handlePrint} style={{ marginRight: '10px' }}>
-                  Print
-                </button>
-                <button onClick={() => setShowPreview(false)}>Close</button>
-              </div>
+            <div style={{ borderTop: '2px solid #111', margin: '5px 0' }} />
+            <div style={{ textAlign: 'center', fontSize: '11px', marginTop: '8px' }}>
+              Terima kasih atas kunjungan Anda
             </div>
           </div>
-        )}
+
+          <div
+            style={{
+              textAlign: 'center',
+              marginTop: '16px',
+              display: 'flex',
+              gap: '10px',
+              justifyContent: 'center'
+            }}
+          >
+            <Button
+              variant="contained"
+              color="primary"
+              size="small"
+              disabled={printing}
+              onClick={handlePrint}
+              startIcon={printing ? <CircularProgress size={14} /> : undefined}
+            >
+              {printing ? 'Mencetak...' : 'Print'}
+            </Button>
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={() => setShowPreview(false)}
+              disabled={printing}
+            >
+              Close
+            </Button>
+          </div>
+        </div>
       </div>
+    )
+  }
+
+  if (loadingSettings) {
+    return (
+      <IconButton disabled size="small">
+        <CircularProgress size={18} />
+      </IconButton>
+    )
+  }
+
+  return (
+    <>
+      <Button
+        onClick={() => setShowPreview(true)}
+        variant="contained"
+        sx={{ borderRadius: '50%', minWidth: 40, width: 40, height: 40, padding: 0 }}
+      >
+        CO
+      </Button>
+
+      {showPreview && renderPreview()}
     </>
   )
 }
 
 export default CO
+

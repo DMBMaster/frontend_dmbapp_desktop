@@ -99,7 +99,8 @@ export const ExpensesPage = () => {
     exportToPDF,
     exportToExcel,
     pageParams,
-    setPageParams
+    setPageParams,
+    permissions
   } = UseIndex()
 
   const {
@@ -301,18 +302,20 @@ export const ExpensesPage = () => {
         ),
         cell: (info) => (
           <Box display="flex" justifyContent="center">
-            <IconButton
-              color="primary"
-              size="small"
-              onClick={() => navigate(`/expenses/detail/${info.getValue()}`)}
-            >
-              <IconEye width={22} />
-            </IconButton>
+            {permissions.read && (
+              <IconButton
+                color="primary"
+                size="small"
+                onClick={() => navigate(`/expenses/detail/${info.getValue()}`)}
+              >
+                <IconEye width={22} />
+              </IconButton>
+            )}
           </Box>
         )
       })
     ],
-    []
+    [permissions]
   )
 
   // React Table instance — pakai data langsung dari server (filtering sudah server-side)
@@ -349,7 +352,7 @@ export const ExpensesPage = () => {
   // Outlet options untuk Autocomplete
   const selectedOutletOption = listOutlets.find((o) => o?.outlet?.guid === outletId) || null
 
-  return (
+  return permissions.read ? (
     <Box>
       <Breadcrumb title="Riwayat Pengeluaran" items={BCrumb} />
 
@@ -367,9 +370,16 @@ export const ExpensesPage = () => {
             />
           )}
         </Box>
-        <Button variant="contained" startIcon={<IconPlus size={20} />} onClick={handleOpenModal}>
-          Pengeluaran Baru
-        </Button>
+        <Stack direction="row" spacing={1.5}>
+          <Button variant="outlined" startIcon={<IconList size={20} />} onClick={() => navigate('/expenses/category')}>
+            Kategori Pengeluaran
+          </Button>
+          {permissions.create && (
+            <Button variant="contained" startIcon={<IconPlus size={20} />} onClick={handleOpenModal}>
+              Pengeluaran Baru
+            </Button>
+          )}
+        </Stack>
       </Stack>
 
       <Grid container spacing={3}>
@@ -928,6 +938,12 @@ export const ExpensesPage = () => {
           </Button>
         </DialogActions>
       </Dialog>
+    </Box>
+  ) : (
+    <Box display="flex" justifyContent="center" alignItems="center" height="100%">
+      <Typography variant="h6" color="textPrimary">
+        Anda tidak memiliki izin untuk melihat halaman ini.
+      </Typography>
     </Box>
   )
 }

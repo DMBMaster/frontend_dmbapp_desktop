@@ -2,8 +2,9 @@ import { Chip } from '@mui/material'
 import { useNotifier } from '@renderer/components/core/NotificationProvider'
 import ExpensesService from '@renderer/services/expensesService'
 import MediaService from '@renderer/services/mediaService'
-import { userData } from '@renderer/utils/config'
+import { userData, userRole } from '@renderer/utils/config'
 import { useEffect, useState } from 'react'
+import { usePermissions } from '@renderer/store/usePermission'
 import { useParams } from 'react-router-dom'
 
 export const UseIndex = () => {
@@ -11,6 +12,7 @@ export const UseIndex = () => {
   const { id } = useParams()
   const expensesService = ExpensesService()
   const mediaService = MediaService()
+  const permissions = usePermissions(userRole)
 
   const [detailData, setDetailData] = useState()
   const [loading, setLoading] = useState({
@@ -280,6 +282,7 @@ export const UseIndex = () => {
     getNormalizedReceipt,
     isImageReceipt,
     handleReceiptUpload,
-    newReceiptFile
+    newReceiptFile,
+    permissions
   }
 }

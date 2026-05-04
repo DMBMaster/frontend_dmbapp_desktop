@@ -14,6 +14,41 @@ const ExpensesCategoryService = () => {
   const axiosInstance = useAxiosInstanceB()
   const getOutletGuid = () => localStorage.getItem('outletGuid')
 
+  const upsertCategoryCache = async (outletGuid, category) => {
+    if (!category || !outletGuid) return
+
+    const cached = await localdb.expensesCategories.where({ outlet_guid: outletGuid }).toArray()
+    const existing = cached.find(
+      (item) => item?.category_id === category?.id || item?.data?.guid === category?.guid
+    )
+
+    if (existing?.id) {
+      await localdb.expensesCategories.update(existing.id, {
+        category_id: category.id,
+        data: category,
+        updated_at: new Date().toISOString()
+      })
+      return
+    }
+
+    await localdb.expensesCategories.add({
+      outlet_guid: outletGuid,
+      category_id: category.id,
+      data: category,
+      updated_at: new Date().toISOString()
+    })
+  }
+
+  const removeCategoryCacheByGuid = async (outletGuid, guid) => {
+    if (!guid || !outletGuid) return
+
+    const cached = await localdb.expensesCategories.where({ outlet_guid: outletGuid }).toArray()
+    const existing = cached.find((item) => item?.data?.guid === guid)
+    if (existing?.id) {
+      await localdb.expensesCategories.delete(existing.id)
+    }
+  }
+
   // ============================
   // GET EXPENSES CATEGORIES LIST
   // ============================
@@ -96,12 +131,7 @@ const ExpensesCategoryService = () => {
 
         // Cache the new category
         if (responseData?.data) {
-          await localdb.expensesCategories.add({
-            outlet_guid: outletGuid,
-            category_id: responseData.data.id,
-            data: responseData.data,
-            updated_at: new Date().toISOString()
-          })
+          await upsertCategoryCache(outletGuid, responseData.data)
         }
 
         return responseData
@@ -114,6 +144,39 @@ const ExpensesCategoryService = () => {
       // ===== OFFLINE MODE =====
       return await saveToPendingQueue(outletGuid, payload)
     }
+  }
+
+  // ============================
+  // UPDATE EXPENSES CATEGORY
+  // ============================
+  const updateExpensesCategory = async (guid, payload) => {
+    if (!isOnline()) {
+      throw new Error('Update kategori membutuhkan koneksi internet.')
+    }
+
+    const outletGuid = getOutletGuid()
+    const res = await axiosInstance.patch(`/expenses-category/${guid}`, payload)
+    const responseData = res.data
+
+    if (responseData?.data) {
+      await upsertCategoryCache(outletGuid, responseData.data)
+    }
+
+    return responseData
+  }
+
+  // ============================
+  // DELETE EXPENSES CATEGORY
+  // ============================
+  const deleteExpensesCategory = async (guid) => {
+    if (!isOnline()) {
+      throw new Error('Hapus kategori membutuhkan koneksi internet.')
+    }
+
+    const outletGuid = getOutletGuid()
+    const res = await axiosInstance.delete(`/expenses-category/${guid}`)
+    await removeCategoryCacheByGuid(outletGuid, guid)
+    return res.data
   }
 
   // Helper: Save to pending queue and return optimistic response
@@ -166,6 +229,8 @@ const ExpensesCategoryService = () => {
   return {
     getExpensesCategories,
     createExpensesCategory,
+    updateExpensesCategory,
+    deleteExpensesCategory,
     getPendingCount
   }
 }

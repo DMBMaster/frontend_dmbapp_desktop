@@ -1,5 +1,6 @@
 import { ExpensesPage } from './expensesPage'
 import { DetailExpensesPage } from './expensesPage/detail'
+import { ExpensesCategoryPage } from './expensesPage/category'
 import { HomePage } from './homePage'
 import { FrontOfficeDashboardPage } from './homePage/frontOffice'
 import { InfoAppPage } from './infoAppPage'
@@ -35,6 +36,18 @@ import { RoomActivityPage } from './settingPage/room/activity'
 import { SettingReceiptPage } from './settingPage/receipt'
 import { UnitPage } from './otherPage/satuan'
 import { ReportFarmPage } from './reportPage/farm'
+import { ReportExpensesPage } from './reportPage/expenses'
+import { ReportCategoryPage } from './reportPage/category'
+import { ReportTransactionPage } from './reportPage/transaction'
+import { ReportCashierPage } from './reportPage/cashier'
+import { ReportInvoicePage } from './reportPage/invoice'
+import { ReportIncomeCustomerPage } from './reportPage/incomeCustomer'
+import { ReportSalesPage } from './reportPage/sales'
+import { ReportDeliveryOrderPage } from './reportPage/deliveryOrder'
+import { ReportPresensiPage } from './reportPage/presensi'
+import { ReportProfitPage } from './reportPage/profit'
+import { ReportCommissionPage } from './reportPage/commission'
+import { ReportVisitPage } from './reportPage/visit'
 
 export {
   NotFoundPage,
@@ -43,6 +56,7 @@ export {
   InfoAppPage,
   ExpensesPage,
   DetailExpensesPage,
+  ExpensesCategoryPage,
   HistoryTransactionPage,
   InstoreTransactionPage,
   DetailTransactionPage,
@@ -73,5 +87,17 @@ export {
   RoomActivityPage,
   SettingReceiptPage,
   UnitPage,
-  ReportFarmPage
+  ReportFarmPage,
+  ReportExpensesPage,
+  ReportCategoryPage,
+  ReportTransactionPage,
+  ReportCashierPage,
+  ReportInvoicePage,
+  ReportIncomeCustomerPage,
+  ReportSalesPage,
+  ReportDeliveryOrderPage,
+  ReportPresensiPage,
+  ReportProfitPage,
+  ReportCommissionPage,
+  ReportVisitPage
 }

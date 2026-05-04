@@ -61,14 +61,15 @@ export const DetailExpensesPage = () => {
     getNormalizedReceipt,
     isImageReceipt,
     handleReceiptUpload,
-    newReceiptFile
+    newReceiptFile,
+    permissions
   } = UseIndex()
 
   if (loading.fetchDetail) {
     return <div>Loading...</div>
   }
 
-  return (
+  return permissions.read ? (
     <Box>
       <Breadcrumb
         showBackButton={true}
@@ -601,6 +602,12 @@ export const DetailExpensesPage = () => {
           </Snackbar>
         </Box>
       </BlankCard>
+    </Box>
+  ) : (
+    <Box display="flex" justifyContent="center" alignItems="center" height="100%">
+      <Typography variant="h6" color="textPrimary">
+        Anda tidak memiliki izin untuk melihat halaman ini.
+      </Typography>
     </Box>
   )
 }

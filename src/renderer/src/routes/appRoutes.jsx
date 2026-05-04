@@ -5,6 +5,7 @@ import {
   RatePlanPage,
   ExpensesPage,
   DetailExpensesPage,
+  ExpensesCategoryPage,
   HistoryTransactionPage,
   InstoreTransactionPage,
   DetailTransactionPage,
@@ -34,7 +35,19 @@ import {
   RoomActivityPage,
   SettingReceiptPage,
   UnitPage,
-  ReportFarmPage
+  ReportFarmPage,
+  ReportExpensesPage,
+  ReportCategoryPage,
+  ReportTransactionPage,
+  ReportCashierPage,
+  ReportInvoicePage,
+  ReportIncomeCustomerPage,
+  ReportSalesPage,
+  ReportDeliveryOrderPage,
+  ReportPresensiPage,
+  ReportProfitPage,
+  ReportCommissionPage,
+  ReportVisitPage
 } from '@renderer/pages'
 import { CrashTestPage } from '@renderer/pages/crashTestPage'
 
@@ -74,6 +87,13 @@ export const appRoutes = [
   {
     path: '/expenses/detail/:id',
     element: <DetailExpensesPage />,
+    active: true,
+    protected: true,
+    redirectTo: '/login'
+  },
+  {
+    path: '/expenses/category',
+    element: <ExpensesCategoryPage />,
     active: true,
     protected: true,
     redirectTo: '/login'
@@ -289,6 +309,90 @@ export const appRoutes = [
   {
     path: '/report/farm',
     element: <ReportFarmPage />,
+    active: true,
+    protected: true,
+    redirectTo: '/login'
+  },
+  {
+    path: '/report/expenses',
+    element: <ReportExpensesPage />,
+    active: true,
+    protected: true,
+    redirectTo: '/login'
+  },
+  {
+    path: '/report/category',
+    element: <ReportCategoryPage />,
+    active: true,
+    protected: true,
+    redirectTo: '/login'
+  },
+  {
+    path: '/report/transaction',
+    element: <ReportTransactionPage />,
+    active: true,
+    protected: true,
+    redirectTo: '/login'
+  },
+  {
+    path: '/report/cashier',
+    element: <ReportCashierPage />,
+    active: true,
+    protected: true,
+    redirectTo: '/login'
+  },
+  {
+    path: '/report/invoice',
+    element: <ReportInvoicePage />,
+    active: true,
+    protected: true,
+    redirectTo: '/login'
+  },
+  {
+    path: '/report/income-customer',
+    element: <ReportIncomeCustomerPage />,
+    active: true,
+    protected: true,
+    redirectTo: '/login'
+  },
+  {
+    path: '/report/sales',
+    element: <ReportSalesPage />,
+    active: true,
+    protected: true,
+    redirectTo: '/login'
+  },
+  {
+    path: '/report/do',
+    element: <ReportDeliveryOrderPage />,
+    active: true,
+    protected: true,
+    redirectTo: '/login'
+  },
+  {
+    path: '/report/presensi',
+    element: <ReportPresensiPage />,
+    active: true,
+    protected: true,
+    redirectTo: '/login'
+  },
+  {
+    path: '/report/profit',
+    element: <ReportProfitPage />,
+    active: true,
+    protected: true,
+    redirectTo: '/login'
+  },
+  {
+    path: '/report/commission',
+    element: <ReportCommissionPage />,
+    active: true,
+    protected: true,
+    redirectTo: '/login'
+  },
+  {
+    path: '/report/visit',
+    element: <ReportVisitPage />,
     active: true,
     protected: true,
     redirectTo: '/login'
