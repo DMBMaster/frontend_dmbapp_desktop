@@ -17,6 +17,7 @@ import {
   TextField,
   Typography
 } from '@mui/material'
+import { FileDownload, PictureAsPdf } from '@mui/icons-material'
 import { useReportExpenses } from './hook/useReportExpenses'
 import Breadcrumb from '@renderer/components/ui/breadcrumb/Breadcrumb'
 
@@ -30,7 +31,11 @@ export const ReportExpensesPage = () => {
     pageParams,
     setPageParams,
     fetchData,
+    exportPdf,
+    exportExcel,
     loading,
+    exportingPdf,
+    exportingExcel,
     data,
     columns,
     showSearch = true,
@@ -114,7 +119,27 @@ export const ReportExpensesPage = () => {
               disabled={loading}
               sx={{ minWidth: 140 }}
             >
-              Filter
+              Fetch Data
+            </Button>
+            <Button
+              variant="outlined"
+              color="secondary"
+              startIcon={<PictureAsPdf />}
+              onClick={exportPdf}
+              disabled={loading || exportingPdf || data.length === 0}
+              sx={{ minWidth: 150 }}
+            >
+              {exportingPdf ? 'Exporting...' : 'Export PDF'}
+            </Button>
+            <Button
+              variant="outlined"
+              color="success"
+              startIcon={<FileDownload />}
+              onClick={exportExcel}
+              disabled={loading || exportingExcel || data.length === 0}
+              sx={{ minWidth: 160 }}
+            >
+              {exportingExcel ? 'Exporting...' : 'Export Excel'}
             </Button>
           </Stack>
         </CardContent>

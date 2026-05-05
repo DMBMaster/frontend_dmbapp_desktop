@@ -26,6 +26,18 @@ const formatNumber = (value, options = {}) => {
   }).format(amount)
 }
 
+const formatDateForDisplay = (value) => {
+  if (!value) return '-'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  const d = String(date.getDate()).padStart(2, '0')
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const y = date.getFullYear()
+  return `${d}/${m}/${y}`
+}
+
+const sanitizeFileName = (value) => (value || '').replace(/[^a-zA-Z0-9_-]/g, '_')
+
 const createEmptyReport = () => ({
   summary: {
     totalRevenue: 0,
@@ -85,6 +97,8 @@ export const useReportProfit = () => {
 
   const [loading, setLoading] = useState(false)
   const [hasData, setHasData] = useState(false)
+  const [exportingPdf, setExportingPdf] = useState(false)
+  const [exportingExcel, setExportingExcel] = useState(false)
   const [reportData, setReportData] = useState(createEmptyReport())
   const [pageParams, setPageParams] = useState({
     startDate: getFirstDayOfCurrentMonth(),
@@ -144,99 +158,198 @@ export const useReportProfit = () => {
   }, [])
 
   const exportPdf = useCallback(async () => {
-    if (!hasData) return
+    if (!hasData) {
+      notifier.show({
+        message: 'Tidak ada data untuk diexport',
+        description: 'Silakan fetch data terlebih dahulu.',
+        severity: 'warning'
+      })
+      return
+    }
 
-    const { default: jsPDF } = await import('jspdf')
-    const { default: autoTable } = await import('jspdf-autotable')
+    setExportingPdf(true)
+    try {
+      const { default: jsPDF } = await import('jspdf')
+      const { default: autoTable } = await import('jspdf-autotable')
 
-    const doc = new jsPDF()
-    const outletName = localStorage.getItem('outletName') || 'Outlet'
-    const summary = reportData.summary
+      const doc = new jsPDF()
+      const outletName = localStorage.getItem('outletName') || 'Outlet Tidak Diketahui'
+      const summary = reportData.summary
 
-    doc.setFontSize(18)
-    doc.text('Laporan Laba Rugi', 105, 18, { align: 'center' })
-    doc.setFontSize(12)
-    doc.text(outletName, 105, 27, { align: 'center' })
-    doc.text(`Periode: ${pageParams.startDate} s/d ${pageParams.endDate}`, 105, 35, {
-      align: 'center'
-    })
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(18)
+      doc.text('Laporan Laba Rugi', 105, 20, { align: 'center' })
 
-    doc.setFontSize(11)
-    doc.text(`Total Pendapatan: Rp ${formatNumber(summary.totalRevenue)}`, 14, 48)
-    doc.text(`Total Pengeluaran: Rp ${formatNumber(summary.totalExpenses)}`, 14, 56)
-    doc.text(`Laba Kotor: Rp ${formatNumber(summary.grossProfit)}`, 14, 64)
-    doc.text(`Margin Laba: ${summary.profitMargin}`, 14, 72)
-    doc.text(
-      `Nilai Transaksi Rata-rata: Rp ${formatNumber(summary.averageTransactionValue, {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-      })}`,
-      14,
-      80
-    )
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(14)
+      doc.text(outletName, 105, 30, { align: 'center' })
 
-    autoTable(doc, {
-      head: [['Kategori Pendapatan', 'Total (Rp)']],
-      body: Object.entries(reportData.revenueByCategory).map(([category, amount]) => [
-        category,
-        formatNumber(amount)
-      ]),
-      startY: 90
-    })
+      doc.setFontSize(12)
+      doc.text(
+        `Periode: ${formatDateForDisplay(pageParams.startDate)} - ${formatDateForDisplay(pageParams.endDate)}`,
+        105,
+        40,
+        { align: 'center' }
+      )
 
-    autoTable(doc, {
-      head: [['Kategori Pengeluaran', 'Total (Rp)']],
-      body: Object.entries(reportData.expensesByCategory).map(([category, amount]) => [
-        category,
-        formatNumber(amount)
-      ]),
-      startY: doc.lastAutoTable.finalY + 8
-    })
+      doc.setFontSize(10)
+      doc.text(`Dicetak pada: ${new Date().toLocaleString('id-ID')}`, 14, 55)
 
-    doc.save(`laporan-laba-rugi-${pageParams.startDate}-${pageParams.endDate}.pdf`)
-  }, [hasData, pageParams.endDate, pageParams.startDate, reportData])
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(12)
+      doc.text('Ringkasan', 14, 70)
+
+      doc.setFont('helvetica', 'normal')
+      doc.text(`Total Pendapatan: Rp ${formatNumber(summary.totalRevenue)}`, 14, 80)
+      doc.text(`Total Pengeluaran: Rp ${formatNumber(summary.totalExpenses)}`, 14, 90)
+      doc.text(`Laba Kotor: Rp ${formatNumber(summary.grossProfit)}`, 14, 100)
+      doc.text(`Margin Laba: ${summary.profitMargin || '0.00%'}`, 14, 110)
+      doc.text(
+        `Nilai Transaksi Rata-rata: Rp ${formatNumber(summary.averageTransactionValue, {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        })}`,
+        14,
+        120
+      )
+
+      autoTable(doc, {
+        head: [['No', 'Kategori', 'Total (Rp)']],
+        body: Object.entries(reportData.revenueByCategory || {}).map(
+          ([category, amount], index) => [index + 1, category, formatNumber(amount)]
+        ),
+        startY: 135,
+        styles: { fontSize: 10, cellPadding: 4 },
+        headStyles: { fillColor: [203, 17, 14], textColor: 255, fontStyle: 'bold' },
+        columnStyles: {
+          0: { halign: 'center', cellWidth: 18 },
+          1: { halign: 'left' },
+          2: { halign: 'right', cellWidth: 42 }
+        },
+        margin: { left: 14, right: 14 }
+      })
+
+      const expenseStartY = (doc.lastAutoTable?.finalY || 140) + 12
+      doc.setFont('helvetica', 'bold')
+      doc.text('Pengeluaran per Kategori', 14, expenseStartY)
+
+      autoTable(doc, {
+        head: [['No', 'Kategori', 'Total (Rp)']],
+        body: Object.entries(reportData.expensesByCategory || {}).map(
+          ([category, amount], index) => [index + 1, category, formatNumber(amount)]
+        ),
+        startY: expenseStartY + 5,
+        styles: { fontSize: 10, cellPadding: 4 },
+        headStyles: { fillColor: [203, 17, 14], textColor: 255, fontStyle: 'bold' },
+        columnStyles: {
+          0: { halign: 'center', cellWidth: 18 },
+          1: { halign: 'left' },
+          2: { halign: 'right', cellWidth: 42 }
+        },
+        margin: { left: 14, right: 14 }
+      })
+
+      const outletNameForFile = sanitizeFileName(outletName)
+      doc.save(
+        `Laporan_Laba_Rugi_${outletNameForFile}_${pageParams.startDate}_${pageParams.endDate}.pdf`
+      )
+    } catch (error) {
+      notifier.show({
+        message: 'Gagal export PDF',
+        description: error?.message || 'Terjadi kesalahan saat membuat file PDF.',
+        severity: 'error'
+      })
+    } finally {
+      setExportingPdf(false)
+    }
+  }, [hasData, notifier, pageParams.endDate, pageParams.startDate, reportData])
 
   const exportExcel = useCallback(async () => {
-    if (!hasData) return
+    if (!hasData) {
+      notifier.show({
+        message: 'Tidak ada data untuk diexport',
+        description: 'Silakan fetch data terlebih dahulu.',
+        severity: 'warning'
+      })
+      return
+    }
 
-    const XLSX = await import('xlsx')
-    const summary = reportData.summary
+    setExportingExcel(true)
+    try {
+      const XLSX = await import('xlsx')
+      const outletName = localStorage.getItem('outletName') || 'Outlet Tidak Diketahui'
+      const summary = reportData.summary
 
-    const rows = [
-      ['Laporan Laba Rugi'],
-      [`Periode: ${pageParams.startDate} s/d ${pageParams.endDate}`],
-      [],
-      ['Ringkasan'],
-      ['Total Pendapatan', summary.totalRevenue],
-      ['Total Pengeluaran', summary.totalExpenses],
-      ['Laba Kotor', summary.grossProfit],
-      ['Margin Laba', summary.profitMargin],
-      ['Nilai Transaksi Rata-rata', summary.averageTransactionValue],
-      [],
-      ['Pendapatan per Kategori'],
-      ['Kategori', 'Total (Rp)'],
-      ...Object.entries(reportData.revenueByCategory).map(([category, amount]) => [
-        category,
-        amount
-      ]),
-      [],
-      ['Pengeluaran per Kategori'],
-      ['Kategori', 'Total (Rp)'],
-      ...Object.entries(reportData.expensesByCategory).map(([category, amount]) => [
-        category,
-        amount
-      ])
-    ]
+      const rows = [
+        ['Laporan Laba Rugi'],
+        [outletName],
+        [
+          `Periode: ${formatDateForDisplay(pageParams.startDate)} - ${formatDateForDisplay(pageParams.endDate)}`
+        ],
+        [`Dicetak pada: ${new Date().toLocaleString('id-ID')}`],
+        [],
+        ['Ringkasan'],
+        ['Total Pendapatan', formatNumber(summary.totalRevenue)],
+        ['Total Pengeluaran', formatNumber(summary.totalExpenses)],
+        ['Laba Kotor', formatNumber(summary.grossProfit)],
+        ['Margin Laba', summary.profitMargin || '0.00%'],
+        [
+          'Nilai Transaksi Rata-rata',
+          formatNumber(summary.averageTransactionValue, {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+          })
+        ],
+        [],
+        ['Pendapatan per Kategori'],
+        ['No', 'Kategori', 'Total (Rp)'],
+        ...Object.entries(reportData.revenueByCategory || {}).map(([category, amount], index) => [
+          index + 1,
+          category,
+          formatNumber(amount)
+        ]),
+        [],
+        ['Pengeluaran per Kategori'],
+        ['No', 'Kategori', 'Total (Rp)'],
+        ...Object.entries(reportData.expensesByCategory || {}).map(([category, amount], index) => [
+          index + 1,
+          category,
+          formatNumber(amount)
+        ])
+      ]
 
-    const ws = XLSX.utils.aoa_to_sheet(rows)
-    const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, 'LabaRugi')
-    XLSX.writeFile(wb, `laporan-laba-rugi-${pageParams.startDate}-${pageParams.endDate}.xlsx`)
-  }, [hasData, pageParams.endDate, pageParams.startDate, reportData])
+      const ws = XLSX.utils.aoa_to_sheet(rows)
+      ws['!cols'] = [{ wch: 8 }, { wch: 36 }, { wch: 18 }]
+      ws['!merges'] = [
+        { s: { r: 0, c: 0 }, e: { r: 0, c: 2 } },
+        { s: { r: 1, c: 0 }, e: { r: 1, c: 2 } },
+        { s: { r: 2, c: 0 }, e: { r: 2, c: 2 } },
+        { s: { r: 3, c: 0 }, e: { r: 3, c: 2 } }
+      ]
+
+      const wb = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(wb, ws, 'Laporan Laba Rugi')
+      const outletNameForFile = sanitizeFileName(outletName)
+      XLSX.writeFile(
+        wb,
+        `Laporan_Laba_Rugi_${outletNameForFile}_${pageParams.startDate}_${pageParams.endDate}.xlsx`
+      )
+    } catch (error) {
+      notifier.show({
+        message: 'Gagal export Excel',
+        description: error?.message || 'Terjadi kesalahan saat membuat file Excel.',
+        severity: 'error'
+      })
+    } finally {
+      setExportingExcel(false)
+    }
+  }, [hasData, notifier, pageParams.endDate, pageParams.startDate, reportData])
 
   return {
     loading,
     hasData,
+    exportingPdf,
+    exportingExcel,
     reportData,
     pageParams,
     setPageParams,

@@ -54,6 +54,7 @@ export const useReportPresensi = () => {
 
   const [data, setData] = useState([])
   const [loading, setLoading] = useState(false)
+  const [exporting, setExporting] = useState(false)
   const [pageParams, setPageParams] = useState({
     page: 1,
     pageSize: 10,
@@ -66,22 +67,34 @@ export const useReportPresensi = () => {
 
   const debouncedSearch = useDebounce(pageParams.searchTerm, 400)
 
+  const buildParams = useCallback(() => {
+    const params = {
+      p: pageParams.page,
+      ps: pageParams.pageSize,
+      start_at: pageParams.startDate,
+      end_at: pageParams.endDate,
+      outlet_id: localStorage.getItem('outletGuid')
+    }
+
+    if (debouncedSearch?.trim()) {
+      params.search = debouncedSearch.trim()
+    }
+
+    return params
+  }, [
+    debouncedSearch,
+    pageParams.endDate,
+    pageParams.page,
+    pageParams.pageSize,
+    pageParams.startDate
+  ])
+
   const fetchData = useCallback(async () => {
     if (!permissions.read) return
 
     setLoading(true)
     try {
-      const params = {
-        p: pageParams.page,
-        ps: pageParams.pageSize,
-        start_at: pageParams.startDate,
-        end_at: pageParams.endDate,
-        outlet_id: localStorage.getItem('outletGuid')
-      }
-
-      if (debouncedSearch?.trim()) {
-        params.search = debouncedSearch.trim()
-      }
+      const params = buildParams()
 
       const response = await reportService.getPresensiReport(params)
       const list = Array.isArray(response?.data) ? response.data : []
@@ -102,16 +115,33 @@ export const useReportPresensi = () => {
     } finally {
       setLoading(false)
     }
-  }, [
-    debouncedSearch,
-    notifier,
-    pageParams.endDate,
-    pageParams.page,
-    pageParams.pageSize,
-    pageParams.startDate,
-    permissions.read,
-    reportService
-  ])
+  }, [buildParams, notifier, permissions.read, reportService])
+
+  const exportPdf = useCallback(async () => {
+    if (!permissions.read) return
+
+    setExporting(true)
+    try {
+      const response = await reportService.getPresensiReportPdf(buildParams())
+      const fileBlob = new Blob([response.data], { type: 'application/pdf' })
+      const url = window.URL.createObjectURL(fileBlob)
+      const anchor = document.createElement('a')
+      anchor.href = url
+      anchor.setAttribute('download', 'Laporan_Absensi.pdf')
+      document.body.appendChild(anchor)
+      anchor.click()
+      document.body.removeChild(anchor)
+      window.URL.revokeObjectURL(url)
+    } catch (error) {
+      notifier.show({
+        message: 'Gagal export PDF presensi',
+        description: error?.response?.data?.message || 'Terjadi kesalahan saat export PDF.',
+        severity: 'error'
+      })
+    } finally {
+      setExporting(false)
+    }
+  }, [buildParams, notifier, permissions.read, reportService])
 
   useEffect(() => {
     fetchData()
@@ -178,10 +208,12 @@ export const useReportPresensi = () => {
   return {
     data,
     loading,
+    exporting,
     permissions,
     pageParams,
     setPageParams,
     fetchData,
+    exportPdf,
     columns,
     title: 'Laporan Presensi',
     subtitle: 'Data kehadiran karyawan',

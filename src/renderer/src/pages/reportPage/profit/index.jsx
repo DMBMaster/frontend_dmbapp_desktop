@@ -36,6 +36,8 @@ export const ReportProfitPage = () => {
     formatNumber,
     loading,
     hasData,
+    exportingPdf,
+    exportingExcel,
     emptyLabel
   } = report
 
@@ -82,22 +84,23 @@ export const ReportProfitPage = () => {
             </Button>
             <Button
               variant="outlined"
+              color="secondary"
               startIcon={<PictureAsPdf />}
               onClick={exportPdf}
-              disabled={loading || !hasData}
+              disabled={loading || exportingPdf || !hasData}
               sx={{ minWidth: 140 }}
             >
-              Export PDF
+              {exportingPdf ? 'Exporting...' : 'Export PDF'}
             </Button>
             <Button
               variant="outlined"
               color="success"
               startIcon={<FileDownload />}
               onClick={exportExcel}
-              disabled={loading || !hasData}
+              disabled={loading || exportingExcel || !hasData}
               sx={{ minWidth: 150 }}
             >
-              Export Excel
+              {exportingExcel ? 'Exporting...' : 'Export Excel'}
             </Button>
           </Stack>
         </CardContent>

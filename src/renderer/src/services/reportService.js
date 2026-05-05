@@ -80,6 +80,14 @@ const ReportService = () => {
     return res.data
   }
 
+  const getPresensiReportPdf = async (params) => {
+    return axiosInstance.get('/attendance/report/pdf', {
+      params,
+      headers: defaultHeaders,
+      responseType: 'blob'
+    })
+  }
+
   const getCommissionReport = async (params) => {
     const res = await axiosInstance.get('/trx-service/group-commission-transaction', {
       params,
@@ -106,6 +114,7 @@ const ReportService = () => {
     getSalesReport,
     getDeliveryOrderReport,
     getPresensiReport,
+    getPresensiReportPdf,
     getCommissionReport,
     getVisitSalesReport
   }

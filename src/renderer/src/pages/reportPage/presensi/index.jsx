@@ -30,7 +30,9 @@ export const ReportPresensiPage = () => {
     pageParams,
     setPageParams,
     fetchData,
+    exportPdf,
     loading,
+    exporting,
     data,
     columns,
     showSearch = true,
@@ -106,7 +108,16 @@ export const ReportPresensiPage = () => {
               disabled={loading}
               sx={{ minWidth: 140 }}
             >
-              Filter
+              Fetch Data
+            </Button>
+            <Button
+              variant="contained"
+              color="secondary"
+              onClick={exportPdf}
+              disabled={exporting || loading || !pageParams.startDate || !pageParams.endDate}
+              sx={{ minWidth: 140 }}
+            >
+              {exporting ? 'Exporting...' : 'Export PDF'}
             </Button>
           </Stack>
         </CardContent>
