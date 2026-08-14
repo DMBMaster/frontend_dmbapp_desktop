@@ -19,6 +19,7 @@ function resolveDllPath() {
       arch,
       'CardEncoder.dll'
     ),
+    join(process.resourcesPath, 'resources', 'cardware', arch, 'CardEncoder.dll'),
     join(process.resourcesPath, 'cardware', arch, 'CardEncoder.dll')
   ]
   return candidates.find((p) => existsSync(p)) || null

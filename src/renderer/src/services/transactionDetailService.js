@@ -214,7 +214,7 @@ const TransactionDetailService = () => {
       })
       return response.data
     } catch (error) {
-      console.warn('⚠️ API failed → Saving to offline queue')
+      console.warn('⚠️ API failed → Saving to offline queue', error)
       await localdb.pendingTransactionItems.add({
         outlet_guid: outletGuid,
         entity_type: 'detail_transaction_item',
@@ -270,7 +270,7 @@ const TransactionDetailService = () => {
       })
       return response.data
     } catch (error) {
-      console.warn('⚠️ API failed → Saving payment to offline queue')
+      console.warn('⚠️ API failed → Saving payment to offline queue', error)
       await localdb.pendingPayments.add({
         outlet_guid: outletGuid,
         entity_type: 'detail_payment',
@@ -326,7 +326,7 @@ const TransactionDetailService = () => {
       })
       return response.data
     } catch (error) {
-      console.warn('⚠️ API failed → Saving deposit to offline queue')
+      console.warn('⚠️ API failed → Saving deposit to offline queue', error)
       await localdb.pendingTransactionItems.add({
         outlet_guid: outletGuid,
         entity_type: 'detail_deposit',
@@ -382,7 +382,7 @@ const TransactionDetailService = () => {
       })
       return response.data
     } catch (error) {
-      console.warn('⚠️ API failed → Saving extension to offline queue')
+      console.warn('⚠️ API failed → Saving extension to offline queue', error)
       await localdb.pendingTransactionItems.add({
         outlet_guid: outletGuid,
         entity_type: 'detail_extension',
@@ -470,7 +470,7 @@ const TransactionDetailService = () => {
       })
       return response.data
     } catch (error) {
-      console.warn('⚠️ API failed → Saving delete to offline queue')
+      console.warn('⚠️ API failed → Saving delete to offline queue', error)
       await localdb.pendingDeletes.add({
         outlet_guid: outletGuid,
         entity_type: 'transaction_item',

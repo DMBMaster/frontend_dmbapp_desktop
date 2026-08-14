@@ -204,7 +204,7 @@ export const DetailTransactionPage = () => {
                 <Box display="flex" flexDirection="column" gap={1}>
                   <Typography variant="h6">Nama Tamu</Typography>
                   <Typography variant="body1" mb={1}>
-                    {transactionDetail?.reservation_nam || transactionDetail?.ticket?.account_name}
+                    {transactionDetail?.reservation_name || transactionDetail?.ticket?.account_name}
                   </Typography>
                 </Box>
 
