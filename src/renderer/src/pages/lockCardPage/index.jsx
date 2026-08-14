@@ -1,5 +1,6 @@
 /* eslint-disable react/prop-types */
 import { useState, useEffect, useMemo } from 'react'
+import LockCardService from '@renderer/services/lockCardService'
 import {
   Box,
   Typography,
@@ -357,6 +358,7 @@ function SetupDrawer({ open, onClose, state, handlers, loading }) {
 }
 
 export function LockCardPage() {
+  const lockCardService = LockCardService()
   const [activeTab, setActiveTab] = useState(0) // 0: Single, 1: Multi, 2: Staff, 3: Cancel
   const [setupOpen, setSetupOpen] = useState(false)
 
@@ -439,6 +441,19 @@ export function LockCardPage() {
 
   const showToast = (message, severity = 'info') => {
     setToast({ open: true, message, severity })
+  }
+
+  const trackAction = async (payload) => {
+    try {
+      const base = {
+        outlet_guid: localStorage.getItem('outletGuid') || '',
+        user_id: localStorage.getItem('userId') || '',
+        timestamp: new Date().toISOString()
+      }
+      await lockCardService.logActivity({ ...base, ...payload })
+    } catch (err) {
+      console.error('Gagal kirim log aktivitas lock card:', err)
+    }
   }
 
   const filteredLocks = useMemo(() => {
@@ -720,21 +735,43 @@ export function LockCardPage() {
         allowLockOut
       })
 
+      const logDetails = {
+        action: 'WRITE_CARD',
+        lock_id: selectedLocks[0]?.lockId,
+        lock_name: selectedLocks[0]?.lockAlias || selectedLocks[0]?.lockName || '',
+        lock_mac: writeMac,
+        building_no: Number(buildNo) || 0,
+        floor_no: Number(floorNo) || 0,
+        start_date: startDate,
+        end_date: allowLockOut ? 'Permanent' : expiry,
+        allow_lockout: allowLockOut
+      }
+
       if (res.ok) {
         showToast('Berhasil menulis kartu Single-Lock!', 'success')
         await handleBeep()
 
         const numRes = await window.api.ce.cardNo()
+        let writtenCardNo = ''
         if (numRes.ok) {
           setCardNo(numRes.cardNo)
+          writtenCardNo = numRes.cardNo
         }
 
         await handleReadCard()
+        await trackAction({ ...logDetails, status: 'SUCCESS', card_number: writtenCardNo })
       } else {
         showToast(`Gagal menulis kartu: ${res.message}`, 'error')
+        await trackAction({ ...logDetails, status: 'FAILED', error_message: res.message })
       }
     } catch (err) {
       showToast(err.message, 'error')
+      await trackAction({
+        action: 'WRITE_CARD',
+        status: 'FAILED',
+        error_message: err.message,
+        lock_mac: mac || selectedLocks[0]?.lockMac || ''
+      })
     } finally {
       setLoading(false)
     }
@@ -768,15 +805,41 @@ export function LockCardPage() {
         allowLockOut
       })
 
+      const logDetails = {
+        action: 'WRITE_MULTI_CARD',
+        lock_ids: selectedLocks.map((l) => l.lockId),
+        lock_names: selectedLocks.map((l) => l.lockAlias || l.lockName || ''),
+        lock_macs: macs,
+        building_no: Number(buildNo) || 0,
+        floor_no: Number(floorNo) || 0,
+        start_date: startDate,
+        end_date: allowLockOut ? 'Permanent' : expiry,
+        allow_lockout: allowLockOut
+      }
+
       if (res.ok) {
         showToast('Berhasil menulis kartu Multi-Lock!', 'success')
         await handleBeep()
+
+        const numRes = await window.api.ce.cardNo()
+        let writtenCardNo = ''
+        if (numRes.ok) {
+          writtenCardNo = numRes.cardNo
+        }
         await handleReadCard()
+        await trackAction({ ...logDetails, status: 'SUCCESS', card_number: writtenCardNo })
       } else {
         showToast(`Gagal menulis multi-lock: ${res.message}`, 'error')
+        await trackAction({ ...logDetails, status: 'FAILED', error_message: res.message })
       }
     } catch (err) {
       showToast(err.message, 'error')
+      await trackAction({
+        action: 'WRITE_MULTI_CARD',
+        status: 'FAILED',
+        error_message: err.message,
+        lock_macs: macs
+      })
     } finally {
       setLoading(false)
     }
@@ -815,15 +878,39 @@ export function LockCardPage() {
         allowLockOut
       })
 
+      const logDetails = {
+        action: 'WRITE_STAFF_CARD',
+        staff_card_type: staffCardType,
+        building_no: Number(buildNo) || 0,
+        floor_no: Number(floorNo) || 0,
+        start_date: startDate,
+        end_date: allowLockOut ? 'Permanent' : expiry,
+        allow_lockout: allowLockOut
+      }
+
       if (res.ok) {
         showToast(`Berhasil menulis kartu staff tipe: ${staffCardType}!`, 'success')
         await handleBeep()
+
+        const numRes = await window.api.ce.cardNo()
+        let writtenCardNo = ''
+        if (numRes.ok) {
+          writtenCardNo = numRes.cardNo
+        }
         await handleReadCard()
+        await trackAction({ ...logDetails, status: 'SUCCESS', card_number: writtenCardNo })
       } else {
         showToast(`Gagal menulis kartu staff: ${res.message}`, 'error')
+        await trackAction({ ...logDetails, status: 'FAILED', error_message: res.message })
       }
     } catch (err) {
       showToast(err.message, 'error')
+      await trackAction({
+        action: 'WRITE_STAFF_CARD',
+        status: 'FAILED',
+        error_message: err.message,
+        staff_card_type: staffCardType
+      })
     } finally {
       setLoading(false)
     }
@@ -847,14 +934,27 @@ export function LockCardPage() {
         timestamp: cancelTimestamp
       })
 
+      const logDetails = {
+        action: 'CANCEL_CARD',
+        card_number: cancelCardNo
+      }
+
       if (res.ok) {
         showToast('Kartu berhasil di-cancel / ditangguhkan!', 'success')
         await handleBeep()
+        await trackAction({ ...logDetails, status: 'SUCCESS' })
       } else {
         showToast(`Gagal melakukan cancel kartu: ${res.message}`, 'error')
+        await trackAction({ ...logDetails, status: 'FAILED', error_message: res.message })
       }
     } catch (err) {
       showToast(err.message, 'error')
+      await trackAction({
+        action: 'CANCEL_CARD',
+        status: 'FAILED',
+        error_message: err.message,
+        card_number: cancelCardNo
+      })
     } finally {
       setLoading(false)
     }
@@ -906,11 +1006,24 @@ export function LockCardPage() {
         showToast('Kartu berhasil dikosongkan', 'success')
         setCardData(null)
         setCardNo('')
+        await trackAction({ action: 'CLEAR_CARD', status: 'SUCCESS', card_number: cardNo })
       } else {
         showToast(`Gagal mengosongkan kartu: ${res.message}`, 'error')
+        await trackAction({
+          action: 'CLEAR_CARD',
+          status: 'FAILED',
+          error_message: res.message,
+          card_number: cardNo
+        })
       }
     } catch (err) {
       showToast(err.message, 'error')
+      await trackAction({
+        action: 'CLEAR_CARD',
+        status: 'FAILED',
+        error_message: err.message,
+        card_number: cardNo
+      })
     } finally {
       setLoading(false)
     }
@@ -928,11 +1041,24 @@ export function LockCardPage() {
         showToast('Kartu berhasil dikembalikan ke blank', 'success')
         setCardData(null)
         setCardNo('')
+        await trackAction({ action: 'DEINIT_CARD', status: 'SUCCESS', card_number: cardNo })
       } else {
         showToast(`Gagal mengembalikan kartu ke blank: ${res.message}`, 'error')
+        await trackAction({
+          action: 'DEINIT_CARD',
+          status: 'FAILED',
+          error_message: res.message,
+          card_number: cardNo
+        })
       }
     } catch (err) {
       showToast(err.message, 'error')
+      await trackAction({
+        action: 'DEINIT_CARD',
+        status: 'FAILED',
+        error_message: err.message,
+        card_number: cardNo
+      })
     } finally {
       setLoading(false)
     }
@@ -1082,17 +1208,35 @@ export function LockCardPage() {
         cardId: card.cardId,
         deleteType: 2
       })
+      const logDetails = {
+        action: 'DELETE_CLOUD_CARD',
+        lock_id: target.lockId,
+        lock_name: target.lockAlias || target.lockName || '',
+        lock_mac: target.lockMac || '',
+        card_id: card.cardId,
+        card_name: card.cardName || '',
+        card_number: card.cardNumber || ''
+      }
       if (res.ok) {
         showToast(
           'Kartu dihapus dari cloud. Penghapusan dari memori lock tidak dijamin via gateway.',
           'success'
         )
         fetchCloudCards(Number(target.lockId), true)
+        await trackAction({ ...logDetails, status: 'SUCCESS' })
       } else {
         showToast(`Hapus kartu gagal: ${res.message}`, 'error')
+        await trackAction({ ...logDetails, status: 'FAILED', error_message: res.message })
       }
     } catch (err) {
       showToast(`Error hapus kartu: ${err.message}`, 'error')
+      await trackAction({
+        action: 'DELETE_CLOUD_CARD',
+        status: 'FAILED',
+        error_message: err.message,
+        lock_id: selectedLocks[0]?.lockId,
+        card_id: card.cardId
+      })
     } finally {
       setCloudCardsLoading(false)
     }
@@ -1126,15 +1270,36 @@ export function LockCardPage() {
       const res = regReversed
         ? await window.api.sciener.cardRegister(params)
         : await window.api.sciener.cardRegisterNormal(params)
+      const logDetails = {
+        action: 'ADD_CLOUD_CARD',
+        lock_id: target.lockId,
+        lock_name: target.lockAlias || target.lockName || '',
+        lock_mac: target.lockMac || '',
+        card_name: cardName || 'Tamu DMB',
+        card_number: cloudCardNumber,
+        start_date: regPermanent ? 'Permanent' : cloudRegDate,
+        end_date: regPermanent ? 'Permanent' : cloudRegExpiry,
+        allow_lockout: regPermanent,
+        byte_order: regReversed ? 'reversed' : 'normal'
+      }
       if (res.ok) {
         showToast(`Kartu berhasil didaftarkan ke Cloud! Card ID: ${res.cardId}`, 'success')
         setCloudCardNumber('')
         fetchCloudCards(Number(target.lockId), true)
+        await trackAction({ ...logDetails, status: 'SUCCESS', card_id: res.cardId })
       } else {
         showToast(`Registrasi cloud gagal: ${res.message}`, 'error')
+        await trackAction({ ...logDetails, status: 'FAILED', error_message: res.message })
       }
     } catch (err) {
       showToast(`Error registrasi cloud: ${err.message}`, 'error')
+      await trackAction({
+        action: 'ADD_CLOUD_CARD',
+        status: 'FAILED',
+        error_message: err.message,
+        lock_id: selectedLocks[0]?.lockId,
+        card_number: cloudCardNumber
+      })
     } finally {
       setCloudCardsLoading(false)
     }
