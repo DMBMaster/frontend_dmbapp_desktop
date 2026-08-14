@@ -1,6 +1,6 @@
 {
   "name": "satudmb-desktopapp-new",
-  "version": "1.0.10",
+  "version": "1.0.11",
   "description": "Sistem Property Management lengkap dengan Front Office, Back Office, Channel Manager, dan Booking Engine untuk meningkatkan efisiensi dan pendapatan hotel Anda.",
   "main": "./out/main/index.js",
   "author": "PT Damai Nusa Abadi",
@@ -41,6 +41,7 @@
     "electron-updater": "^6.3.9",
     "jspdf": "^4.1.0",
     "jspdf-autotable": "^5.0.7",
+    "koffi": "3.1.4",
     "lodash": "^4.17.23",
     "lucide-react": "^0.562.0",
     "moment": "^2.30.1",

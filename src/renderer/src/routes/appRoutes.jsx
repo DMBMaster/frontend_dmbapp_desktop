@@ -1,6 +1,7 @@
 import {
   LoginPage,
   InfoAppPage,
+  LockCardPage,
   HomePage,
   RatePlanPage,
   ExpensesPage,
@@ -288,6 +289,13 @@ export const appRoutes = [
   // #endregion
 
   // #region - SETTING
+  {
+    path: '/setting/lock-card',
+    element: <LockCardPage />,
+    active: true,
+    protected: true,
+    redirectTo: '/login'
+  },
   {
     path: '/setting/rooms/activity',
     element: <RoomActivityPage />,

@@ -74,6 +74,46 @@ const api = {
 
   getAppVersion: async () => {
     return await ipcRenderer.invoke('get-app-version')
+  },
+
+  ce: {
+    load: async () => await ipcRenderer.invoke('ce:load'),
+    configServer: async (url) => await ipcRenderer.invoke('ce:configServer', url),
+    connect: async (port) => await ipcRenderer.invoke('ce:connect', port),
+    disconnect: async () => await ipcRenderer.invoke('ce:disconnect'),
+    initEncoder: async (hotelInfo) => await ipcRenderer.invoke('ce:initEncoder', hotelInfo),
+    getSectors: async () => await ipcRenderer.invoke('ce:getSectors'),
+    setSectors: async (mask) => await ipcRenderer.invoke('ce:setSectors', mask),
+    initCard: async (hotelInfo) => await ipcRenderer.invoke('ce:initCard', hotelInfo),
+    stopInitCard: async () => await ipcRenderer.invoke('ce:stopInitCard'),
+    writeCard: async (args) => await ipcRenderer.invoke('ce:writeCard', args),
+    writeMasterCard: async (args) => await ipcRenderer.invoke('ce:writeMasterCard', args),
+    writeMultipleLocks: async (args) => await ipcRenderer.invoke('ce:writeMultipleLocks', args),
+    cancelCard: async (args) => await ipcRenderer.invoke('ce:cancelCard', args),
+    readCard: async (hotelInfo) => await ipcRenderer.invoke('ce:readCard', hotelInfo),
+    cardNo: async () => await ipcRenderer.invoke('ce:cardNo'),
+    clearCard: async (hotelInfo) => await ipcRenderer.invoke('ce:clearCard', hotelInfo),
+    deinitCard: async (hotelInfo) => await ipcRenderer.invoke('ce:deinitCard', hotelInfo),
+    beep: async () => await ipcRenderer.invoke('ce:beep'),
+    version: async () => await ipcRenderer.invoke('ce:version'),
+    transformMac: async (mac) => await ipcRenderer.invoke('ce:transformMac', mac)
+  },
+  com: {
+    listPorts: async () => await ipcRenderer.invoke('com:listPorts')
+  },
+  sciener: {
+    getHotelInfo: async (p) => await ipcRenderer.invoke('sciener:getHotelInfo', p),
+    token: async (p) => await ipcRenderer.invoke('sciener:token', p),
+    refreshToken: async (p) => await ipcRenderer.invoke('sciener:refreshToken', p),
+    ensureToken: async (p) => await ipcRenderer.invoke('sciener:ensureToken', p),
+    lockList: async (p) => await ipcRenderer.invoke('sciener:lockList', p),
+    lockRecordList: async (p) => await ipcRenderer.invoke('sciener:lockRecordList', p),
+    lockRecordClear: async (p) => await ipcRenderer.invoke('sciener:lockRecordClear', p),
+    lockRecordDelete: async (p) => await ipcRenderer.invoke('sciener:lockRecordDelete', p),
+    cardRegister: async (p) => await ipcRenderer.invoke('sciener:cardRegister', p),
+    cardRegisterNormal: async (p) => await ipcRenderer.invoke('sciener:cardRegisterNormal', p),
+    cardList: async (p) => await ipcRenderer.invoke('sciener:cardList', p),
+    cardDelete: async (p) => await ipcRenderer.invoke('sciener:cardDelete', p)
   }
 }
 

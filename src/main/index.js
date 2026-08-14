@@ -5,6 +5,8 @@ import { registerAppIpc } from './ipc/app.ipc.js'
 import { registerDeviceIpc } from './ipc/device.ipc.js'
 import { registerPrinterIpc } from './ipc/printer.ipc.js'
 import { registerWindowIpc } from './ipc/window.ipc.js'
+import { registerCardEncoderIpc } from './ipc/cardEncoder.ipc.js'
+import { registerScienerIpc } from './ipc/sciener.ipc.js'
 import {
   startNetworkMonitoring,
   stopNetworkMonitoring,
@@ -20,6 +22,8 @@ registerDeviceIpc()
 registerPrinterIpc()
 registerWindowIpc()
 registerNetworkIpc()
+registerCardEncoderIpc()
+registerScienerIpc()
 
 app.whenReady().then(() => {
   electronApp.setAppUserModelId('com.electron')

@@ -48,9 +48,11 @@ import { ReportPresensiPage } from './reportPage/presensi'
 import { ReportProfitPage } from './reportPage/profit'
 import { ReportCommissionPage } from './reportPage/commission'
 import { ReportVisitPage } from './reportPage/visit'
+import { LockCardPage } from './lockCardPage'
 
 export {
   NotFoundPage,
+  LockCardPage,
   HomePage,
   LoginPage,
   InfoAppPage,
